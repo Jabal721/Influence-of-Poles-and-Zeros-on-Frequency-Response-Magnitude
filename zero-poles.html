@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Z-Plane Pole-Zero Explorer</title>
+    <!-- Chart.js Library via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --border-color: #334155;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --pole-color: #ef4444;
+            --zero-color: #3b82f6;
+            --accent-color: #f59e0b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; }
+        p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+        .status-banner {
+            background-color: #15803d;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+        }
+        .status-banner.unstable {
+            background-color: var(--pole-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .control-panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        button {
+            background-color: #334155;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        button:hover { background-color: #475569; }
+        button.active {
+            background-color: #3b82f6;
+            border-color: #60a5fa;
+        }
+        button.danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #f87171;
+        }
+        button.danger:hover { background-color: rgba(239, 68, 68, 0.2); }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        canvas#zPlane {
+            background-color: #1e293b;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: default;
+            width: 100%;
+            aspect-ratio: 1;
+        }
+        canvas#zPlane.crosshair-cursor {
+            cursor: crosshair;
+        }
+
+        .charts-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .side-by-side-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .chart-box {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            height: 260px;
+            position: relative;
+        }
+
+        @media (max-width: 900px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .side-by-side-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>Z-Plane Pole-Zero Explorer</h1>
+                <p>Interactive DSP Design Suite: Visualizing Transfer Functions in Time & Frequency Domains</p>
+            </div>
+            <div id="statusBanner" class="status-banner">SYSTEM STABLE</div>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <div class="control-panel">
+            <h3>Interactive Tools</h3>
+            <div class="btn-group">
+                <button id="btnDefault" class="active" onclick="setMode('default')">🔍 Inspect / Move Only (Safe)</button>
+                <button id="btnPole" onclick="setMode('pole')">🔴 Add Pole (System Resonance)</button>
+                <button id="btnZero" onclick="setMode('zero')">🔵 Add Zero (Frequency Null)</button>
+                <button id="btnDelete" onclick="setMode('delete')">✂️ Delete Item</button>
+                <button class="danger" onclick="clearAll()">🧹 Clear All Roots</button>
+            </div>
+
+            <label class="checkbox-container">
+                <input type="checkbox" id="chkConjugate" checked>
+                Keep Complex Conjugates Symmetric
+            </label>
+
+            <canvas id="zPlane" width="300" height="300"></canvas>
+        </div>
+
+        <div class="charts-panel">
+            <div class="side-by-side-grid">
+                <div class="chart-box">
+                    <canvas id="freqChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="phaseChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-box">
+                <canvas id="timeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Store
+        let poles = [];
+        let zeros = [];
+        let currentMode = 'default'; // 'default', 'pole', 'zero', 'delete'
+        let draggedRoot = null;
+
+        // Constants
+        const CANVAS_SIZE = 300;
+        const CENTER = CANVAS_SIZE / 2;
+        const RADIUS = CANVAS_SIZE * 0.4; 
+
+        // Global Chart Declarations
+        let freqChart, phaseChart, timeChart;
+        const freqLabels = [];
+        const timeLabels = [];
+
+        // Precompute Labels
+        const numFreqPoints = 100;
+        for (let i = 0; i <= numFreqPoints; i++) {
+            let val = i / numFreqPoints;
+            freqLabels.push(val === 0 ? '0' : val === 1 ? 'π' : (val).toFixed(2) + 'π');
+        }
+        for (let i = 0; i <= 30; i++) timeLabels.push('n=' + i);
+
+        // Canvas Setup
+        const canvas = document.getElementById('zPlane');
+        const ctx = canvas.getContext('2d');
+
+        window.addEventListener('load', () => {
+            initCharts();
+            drawZPlane();
+            calculateAndPlot();
+            setupCanvasListeners();
+        });
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btnDefault').classList.toggle('active', mode === 'default');
+            document.getElementById('btnPole').classList.toggle('active', mode === 'pole');
+            document.getElementById('btnZero').classList.toggle('active', mode === 'zero');
+            document.getElementById('btnDelete').classList.toggle('active', mode === 'delete');
+            
+            // Toggle cursor styling for clarity
+            if (mode === 'pole' || mode === 'zero') {
+                canvas.classList.add('crosshair-cursor');
+            } else {
+                canvas.classList.remove('crosshair-cursor');
+            }
+        }
+
+        function clearAll() {
+            poles = [];
+            zeros = [];
+            drawZPlane();
+            calculateAndPlot();
+        }
+
+        // Initialize All Charts
+        function initCharts() {
+            const chartConfigBase = {
+                type: 'line',
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: { legend: { display: true, labels: { color: '#f8fafc' } } },
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            };
+
+            // Magnitude Chart
+            freqChart = new Chart(document.getElementById('freqChart').getContext('2d'), {
+                ...chartConfigBase,
+                data: {
+                    labels: freqLabels,
+                    datasets: [{
+                        label: 'Magnitude Response |H(e^jω)|',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                        fill: true,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    ...chartConfigBase.options,
+                    scales: {
+                        ...chartConfigBase.options.scales,
+                        y: { ...chartConfigBase.options.scales.y, min: 0, suggestedMax: 3 }
+                    }
+                }
+            });
+
+            // Phase Chart
+            phaseChart = new Chart(document.getElementById('phaseChart').getContext('2d'), {
+                ...chartConfigBase,
+                data: {
+                    labels: freqLabels,
+                    datasets: [{
+                        label: 'Phase Response ∠H(e^jω)',
+                        data: [],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                        fill: true,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    ...chartConfigBase.options,
+                    scales: {
+                        ...chartConfigBase.options.scales,
+                        y: {
+                            ...chartConfigBase.options.scales.y,
+                            min: -Math.PI,
+                            max: Math.PI,
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value) {
+                                    if (Math.abs(value - Math.PI) < 0.1) return 'π';
+                                    if (value === 0) return '0';
+                                    if (Math.abs(value + Math.PI) < 0.1) return '-π';
+                                    return (value / Math.PI).toFixed(1) + 'π';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Time Domain Chart
+            timeChart = new Chart(document.getElementById('timeChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Impulse Response h[n]',
+                        data: [],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, min: -2, max: 2 }
+                    }
+                }
+            });
+        }
+
+        // Geometric Transforms
+        function pixelToComplex(x, y) {
+            return {
+                re: (x - CENTER) / RADIUS,
+                im: -(y - CENTER) / RADIUS
+            };
+        }
+
+        function complexToPixel(re, im) {
+            return {
+                x: CENTER + re * RADIUS,
+                y: CENTER - im * RADIUS
+            };
+        }
+
+        // Draw the Z-Plane Canvas Visuals
+        function drawZPlane() {
+            ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            // Cartesian Axes
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, CENTER); ctx.lineTo(CANVAS_SIZE, CENTER);
+            ctx.moveTo(CENTER, 0); ctx.lineTo(CENTER, CANVAS_SIZE);
+            ctx.stroke();
+
+            // Unit Circle Boundary
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(CENTER, CENTER, RADIUS, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const drawMarker = (list, isPole) => {
+                list.forEach(r => {
+                    const pos = complexToPixel(r.re, r.im);
+                    ctx.strokeStyle = isPole ? '#ef4444' : '#3b82f6';
+                    ctx.lineWidth = 2.5;
+                    if (isPole) {
+                        ctx.beginPath();
+                        ctx.moveTo(pos.x - 5, pos.y - 5); ctx.lineTo(pos.x + 5, pos.y + 5);
+                        ctx.moveTo(pos.x + 5, pos.y - 5); ctx.lineTo(pos.x - 5, pos.y + 5);
+                        ctx.stroke();
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(pos.x, pos.y, 5, 0, 2 * Math.PI);
+                        ctx.stroke();
+                    }
+                });
+            };
+
+            drawMarker(poles, true);
+            drawMarker(zeros, false);
+        }
+
+        // Core Mathematical Processing Routine
+        function calculateAndPlot() {
+            let isUnstable = poles.some(p => Math.hypot(p.re, p.im) > 1.0);
+            const banner = document.getElementById('statusBanner');
+            if (isUnstable) {
+                banner.innerText = 'SYSTEM UNSTABLE';
+                banner.classList.add('unstable');
+            } else {
+                banner.innerText = 'SYSTEM STABLE';
+                banner.classList.remove('unstable');
+            }
+
+            const freqData = [];
+            const phaseData = [];
+
+            for (let i = 0; i <= numFreqPoints; i++) {
+                const omega = (Math.PI * i) / numFreqPoints;
+                const wRe = Math.cos(omega);
+                const wIm = Math.sin(omega);
+
+                let numMag = 1;
+                let totalPhase = 0;
+
+                zeros.forEach(z => {
+                    numMag *= Math.hypot(wRe - z.re, wIm - z.im);
+                    totalPhase += Math.atan2(wIm - z.im, wRe - z.re);
+                });
+
+                let denMag = 1;
+                poles.forEach(p => {
+                    denMag *= Math.hypot(wRe - p.re, wIm - p.im);
+                    totalPhase -= Math.atan2(wIm - p.im, wRe - p.re);
+                });
+
+                let mag = denMag === 0 ? 100 : numMag / denMag;
+                freqData.push(mag);
+
+                while (totalPhase > Math.PI) totalPhase -= 2 * Math.PI;
+                while (totalPhase < -Math.PI) totalPhase += 2 * Math.PI;
+                phaseData.push(totalPhase);
+            }
+
+            const timeData = [];
+            const N = 31;
+            const x_sig = new Array(N).fill(0); x_sig[0] = 1.0;
+            const y_sig = new Array(N).fill(0);
+            
+            for(let n=0; n<N; n++) {
+                let val = 0;
+                if (poles.length === 0) {
+                    val = x_sig[n];
+                    if (zeros.length > 0) {
+                        val = x_sig[n] - (zeros[0] ? zeros[0].re * (n>0?x_sig[n-1]:0) : 0);
+                    }
+                } else {
+                    let p = poles[0];
+                    let r = Math.hypot(p.re, p.im);
+                    if (poles.length === 1) {
+                        val = x_sig[n] + p.re * (n > 0 ? y_sig[n-1] : 0);
+                    } else {
+                        let p2 = poles[1];
+                        val = x_sig[n] + (p.re + p2.re) * (n > 0 ? y_sig[n-1] : 0) - (r*r) * (n > 1 ? y_sig[n-2] : 0);
+                    }
+                }
+                
+                if (val > 50) val = 50;
+                if (val < -50) val = -50;
+                y_sig[n] = val;
+                timeData.push(val);
+            }
+
+            let maxVal = Math.max(...timeData.map(Math.abs));
+            timeChart.options.scales.y.min = maxVal > 2 ? -Math.min(50, maxVal * 1.2) : -2;
+            timeChart.options.scales.y.max = maxVal > 2 ? Math.min(50, maxVal * 1.2) : 2;
+
+            freqChart.data.datasets[0].data = freqData;
+            freqChart.update('none');
+
+            phaseChart.data.datasets[0].data = phaseData;
+            phaseChart.update('none');
+
+            timeChart.data.datasets[0].data = timeData;
+            timeChart.update('none');
+        }
+
+        // Mouse Action Pipeline Configuration Setup
+        function setupCanvasListeners() {
+            const findClosest = (pt, list) => {
+                let match = null, minD = 15; 
+                list.forEach((r, idx) => {
+                    let pPix = complexToPixel(r.re, r.im);
+                    let d = Math.hypot(pt.x - pPix.x, pt.y - pPix.y);
+                    if (d < minD) { minD = d; match = { list: list, index: idx }; }
+                });
+                return match;
+            };
+
+            canvas.addEventListener('mousedown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mousePt = { 
+                    x: (e.clientX - rect.left) * (canvas.width / rect.width), 
+                    y: (e.clientY - rect.top) * (canvas.height / rect.height) 
+                };
+                const compCoord = pixelToComplex(mousePt.x, mousePt.y);
+
+                let target = findClosest(mousePt, poles) || findClosest(mousePt, zeros);
+
+                if (currentMode === 'delete') {
+                    if (target) {
+                        let item = target.list[target.index];
+                        target.list.splice(target.index, 1);
+                        if (document.getElementById('chkConjugate').checked && Math.abs(item.im) > 0.001) {
+                            let cIdx = target.list.findIndex(r => Math.abs(r.re - item.re) < 0.01 && Math.abs(r.im + item.im) < 0.01);
+                            if (cIdx !== -1) target.list.splice(cIdx, 1);
+                        }
+                        drawZPlane();
+                        calculateAndPlot();
+                    }
+                    return;
+                }
+
+                // In default mode or drawing mode, if we catch an existing root, drag it
+                if (target) {
+                    draggedRoot = target.list[target.index];
+                    return;
+                }
+
+                // If clicking an empty area, only add roots if in explicit drawing modes
+                if (currentMode === 'pole') {
+                    poles.push({ re: compCoord.re, im: compCoord.im });
+                    if (document.getElementById('chkConjugate').checked && Math.abs(compCoord.im) > 0.01) {
+                        poles.push({ re: compCoord.re, im: -compCoord.im });
+                    }
+                } else if (currentMode === 'zero') {
+                    zeros.push({ re: compCoord.re, im: compCoord.im });
+                    if (document.getElementById('chkConjugate').checked && Math.abs(compCoord.im) > 0.01) {
+                        zeros.push({ re: compCoord.re, im: -compCoord.im });
+                    }
+                }
+                // If in 'default' mode, clicking empty space will execute nothing here.
+
+                drawZPlane();
+                calculateAndPlot();
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!draggedRoot) return;
+                const rect = canvas.getBoundingClientRect();
+                const mousePt = { 
+                    x: (e.clientX - rect.left) * (canvas.width / rect.width), 
+                    y: (e.clientY - rect.top) * (canvas.height / rect.height) 
+                };
+                const compCoord = pixelToComplex(mousePt.x, mousePt.y);
+
+                let oldIm = draggedRoot.im;
+                draggedRoot.re = compCoord.re;
+                draggedRoot.im = compCoord.im;
+
+                if (document.getElementById('chkConjugate').checked && Math.abs(oldIm) > 0.001) {
+                    let list = poles.includes(draggedRoot) ? poles : zeros;
+                    let sister = list.find(r => r !== draggedRoot && Math.abs(r.re - draggedRoot.re) < 0.1 && Math.sign(r.im) !== Math.sign(oldIm));
+                    if (sister) {
+                        sister.re = compCoord.re;
+                        sister.im = -compCoord.im;
+                    }
+                }
+
+                drawZPlane();
+                calculateAndPlot();
+            });
+
+            window.addEventListener('mouseup', () => { draggedRoot = null; });
+        }
+    </script>
+</body>
+</html>
