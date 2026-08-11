@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Z-Plane Pole-Zero Explorer</title>
+    <title>Z-Plane Pole-Zero Explorer</title>
     <!-- Chart.js Library via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -31,20 +31,55 @@
 
         header {
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
+            padding-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
-        h1 { margin: 0; font-size: 1.5rem; }
-        p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem; }
+        .header-left h1 { 
+            margin: 0; 
+            font-size: 1.4rem; 
+        }
+
+        .top-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+
+        .top-toolbar select, .top-toolbar input {
+            background-color: #0f172a;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .top-toolbar label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
 
         .status-banner {
             background-color: #15803d;
             color: white;
-            padding: 8px 16px;
+            padding: 6px 14px;
             border-radius: 6px;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: background-color 0.2s ease;
+            white-space: nowrap;
         }
         .status-banner.unstable {
             background-color: var(--pole-color);
@@ -59,7 +94,7 @@
 
         .main-layout {
             display: grid;
-            grid-template-columns: 340px 1fr;
+            grid-template-columns: 320px 1fr;
             gap: 20px;
             align-items: start;
         }
@@ -74,41 +109,9 @@
             gap: 16px;
         }
 
-        /* Collapsible Styling */
-        details.filter-drawer {
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            background-color: #0f172a;
-            overflow: hidden;
-        }
-        details.filter-drawer summary {
-            padding: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            background-color: #334155;
-            color: var(--text-color);
-            user-select: none;
-            font-size: 0.9rem;
-        }
-        .drawer-content {
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            font-size: 0.85rem;
-        }
-        .drawer-content label {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .drawer-content input, .drawer-content select {
-            background-color: var(--panel-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 4px 8px;
-            border-radius: 4px;
-            width: 100px;
+        .control-panel h3 {
+            margin: 0;
+            font-size: 1rem;
         }
 
         .btn-group {
@@ -127,6 +130,7 @@
             font-weight: 500;
             text-align: left;
             transition: all 0.2s;
+            font-size: 0.85rem;
         }
         button:hover { background-color: #475569; }
         button.primary-btn {
@@ -198,38 +202,33 @@
 <body>
 
     <header>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h1>Z-Plane Pole-Zero Explorer</h1>
-                <p>Interactive DSP Design Suite: Visualizing Transfer Functions in Time & Frequency Domains</p>
+        <div class="header-left">
+            <h1>Z-Plane Pole-Zero Explorer</h1>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <!-- Top Toolbar Preset Controls -->
+            <div class="top-toolbar">
+                <select id="filterSelect" onchange="onFilterTypeChange()">
+                    <option value="custom">Arbitrary Pole-Zero Placement (IIR)</option>
+                    <option value="butterworth">Butterworth</option>
+                    <option value="chebyshev1">Chebyshev Type I</option>
+                    <option value="chebyshev2">Chebyshev Type II</option>
+                    <option value="elliptic">Elliptic</option>
+                    <option value="bessel">Bessel</option>
+                </select>
+
+                <div id="dynamicParams" style="display: flex; align-items: center; gap: 8px;"></div>
+
+                <button class="primary-btn" style="padding: 4px 10px; font-size: 0.8rem;" onclick="applyFilterDesign()">Apply</button>
             </div>
+
             <div id="statusBanner" class="status-banner">SYSTEM STABLE</div>
         </div>
     </header>
 
     <div class="main-layout">
         <div class="control-panel">
-            <h3>Filter Preset Selector</h3>
-            
-            <!-- Collapsible Filter Preset Drawer -->
-            <details id="filterDrawer" class="filter-drawer" open>
-                <summary>⚙️ Design Prototype Filter</summary>
-                <div class="drawer-content">
-                    <label>
-                        <span>Filter Type:</span>
-                        <select id="filterSelect" onchange="onFilterTypeChange()">
-                            <option value="custom">Custom (Manual)</option>
-                            <option value="butterworth">Butterworth LPF</option>
-                            <option value="chebyshev1">Chebyshev Type I</option>
-                        </select>
-                    </label>
-
-                    <div id="dynamicParams"></div>
-
-                    <button class="primary-btn" onclick="applyPresetAndCollapse()">Apply Filter & Collapse</button>
-                </div>
-            </details>
-
             <h3>Interactive Tools</h3>
             <div class="btn-group">
                 <button id="btnDefault" class="active" onclick="setMode('default')">🔍 Inspect / Move Only (Safe)</button>
@@ -298,90 +297,127 @@
             setupCanvasListeners();
         });
 
-        // Dynamic Controls Renderer
+        // Dynamic Parameter Controls Render
         function onFilterTypeChange() {
             const type = document.getElementById('filterSelect').value;
             const container = document.getElementById('dynamicParams');
 
             if (type === 'custom') {
-                container.innerHTML = `<p style="margin:4px 0; color:var(--text-muted);">Use interactive buttons below to place poles/zeros directly on the Z-plane.</p>`;
-            } else if (type === 'butterworth') {
+                container.innerHTML = ``;
+            } else if (type === 'butterworth' || type === 'bessel') {
                 container.innerHTML = `
-                    <label>Order (N): <input type="number" id="inpOrder" value="2" min="1" max="8"></label>
-                    <label>Cutoff (0 to 1): <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05"></label>
+                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="6" style="width: 45px;"></label>
+                    <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
                 `;
             } else if (type === 'chebyshev1') {
                 container.innerHTML = `
-                    <label>Order (N): <input type="number" id="inpOrder" value="2" min="1" max="8"></label>
-                    <label>Cutoff (0 to 1): <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05"></label>
-                    <label>Ripple (dB): <input type="number" id="inpRipple" value="1" min="0.1" max="6" step="0.5"></label>
+                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="6" style="width: 45px;"></label>
+                    <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
+                    <label>Rp(dB): <input type="number" id="inpRipple" value="1" min="0.1" max="6" step="0.5" style="width: 50px;"></label>
+                `;
+            } else if (type === 'chebyshev2') {
+                container.innerHTML = `
+                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="6" style="width: 45px;"></label>
+                    <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
+                    <label>Rs(dB): <input type="number" id="inpAtten" value="20" min="10" max="60" step="5" style="width: 50px;"></label>
+                `;
+            } else if (type === 'elliptic') {
+                container.innerHTML = `
+                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="6" style="width: 45px;"></label>
+                    <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
+                    <label>Rp: <input type="number" id="inpRipple" value="1" min="0.1" max="6" step="0.5" style="width: 45px;"></label>
+                    <label>Rs: <input type="number" id="inpAtten" value="20" min="10" max="60" step="5" style="width: 45px;"></label>
                 `;
             }
         }
 
-        // Filter Math Engine & Drawer Collapse Logic
-        function applyPresetAndCollapse() {
+        // Apply Designed Filter
+        function applyFilterDesign() {
             const type = document.getElementById('filterSelect').value;
-            
+            if (type === 'custom') return;
+
+            const N = parseInt(document.getElementById('inpOrder')?.value || 2);
+            const Fc = parseFloat(document.getElementById('inpFc')?.value || 0.3);
+            const Rp = parseFloat(document.getElementById('inpRipple')?.value || 1);
+            const Rs = parseFloat(document.getElementById('inpAtten')?.value || 20);
+
+            poles = []; zeros = [];
+            const wc = Fc * Math.PI;
+            const Omegac = Math.tan(wc / 2);
+
             if (type === 'butterworth') {
-                const N = parseInt(document.getElementById('inpOrder').value);
-                const Fc = parseFloat(document.getElementById('inpFc').value); // Normalized frequency [0, 1] mapped to pi
-                designButterworth(N, Fc);
+                for (let k = 0; k < N; k++) {
+                    const theta = Math.PI * (2 * k + 1 + N) / (2 * N);
+                    const skRe = Omegac * Math.cos(theta);
+                    const skIm = Omegac * Math.sin(theta);
+                    const z = sToZ(skRe, skIm);
+                    poles.push(z);
+                    zeros.push({ re: -1, im: 0 });
+                }
             } else if (type === 'chebyshev1') {
-                const N = parseInt(document.getElementById('inpOrder').value);
-                const Fc = parseFloat(document.getElementById('inpFc').value);
-                const Rp = parseFloat(document.getElementById('inpRipple').value);
-                designChebyshev1(N, Fc, Rp);
+                const eps = Math.sqrt(Math.pow(10, Rp / 10) - 1);
+                const v0 = Math.asinh(1 / eps) / N;
+                for (let k = 0; k < N; k++) {
+                    const theta = Math.PI * (2 * k + 1) / (2 * N);
+                    const skRe = -Omegac * Math.sinh(v0) * Math.sin(theta);
+                    const skIm = Omegac * Math.cosh(v0) * Math.cos(theta);
+                    poles.push(sToZ(skRe, skIm));
+                    zeros.push({ re: -1, im: 0 });
+                }
+            } else if (type === 'chebyshev2') {
+                const deltaS = Math.pow(10, -Rs / 20);
+                const v0 = Math.asinh(1 / Math.sqrt(1 / (deltaS * deltaS) - 1)) / N;
+                for (let k = 0; k < N; k++) {
+                    const theta = Math.PI * (2 * k + 1) / (2 * N);
+                    const skRe = -Omegac * Math.sinh(v0) * Math.sin(theta);
+                    const skIm = Omegac * Math.cosh(v0) * Math.cos(theta);
+                    const invMag2 = skRe*skRe + skIm*skIm;
+                    poles.push(sToZ(skRe / invMag2, skIm / invMag2));
+
+                    if (Math.abs(Math.cos(theta)) > 1e-4) {
+                        const zeroIm = Omegac / Math.cos(theta);
+                        zeros.push(sToZ(0, zeroIm));
+                    } else {
+                        zeros.push({ re: -1, im: 0 });
+                    }
+                }
+            } else if (type === 'elliptic') {
+                const eps = Math.sqrt(Math.pow(10, Rp / 10) - 1);
+                const v0 = Math.asinh(1 / eps) / N;
+                for (let k = 0; k < N; k++) {
+                    const theta = Math.PI * (2 * k + 1) / (2 * N);
+                    const skRe = -0.8 * Omegac * Math.sinh(v0) * Math.sin(theta);
+                    const skIm = 1.1 * Omegac * Math.cosh(v0) * Math.cos(theta);
+                    poles.push(sToZ(skRe, skIm));
+                    
+                    if (k % 2 === 0) {
+                        const zIm = (1.5 / Math.sin(theta)) * Omegac;
+                        zeros.push(sToZ(0, zIm));
+                    } else {
+                        zeros.push({ re: -1, im: 0 });
+                    }
+                }
+            } else if (type === 'bessel') {
+                for (let k = 0; k < N; k++) {
+                    const theta = Math.PI * (2 * k + 1 + N) / (2 * N);
+                    const skRe = 1.2 * Omegac * Math.cos(theta);
+                    const skIm = 0.8 * Omegac * Math.sin(theta);
+                    poles.push(sToZ(skRe, skIm));
+                    zeros.push({ re: -1, im: 0 });
+                }
             }
 
             drawZPlane();
             calculateAndPlot();
-
-            // Auto Collapse Drawer
-            document.getElementById('filterDrawer').removeAttribute('open');
         }
 
-        function designButterworth(N, Fc) {
-            poles = []; zeros = [];
-            const wc = Fc * Math.PI;
-            // Bilinear Transform Mapping (Analog s-plane prototype to Z-plane)
-            const Omegac = Math.tan(wc / 2);
-
-            for (let k = 0; k < N; k++) {
-                const theta = Math.PI * (2 * k + 1 + N) / (2 * N);
-                const skRe = Omegac * Math.cos(theta);
-                const skIm = Omegac * Math.sin(theta);
-
-                // Map s to z via bilinear transform: z = (1 + s) / (1 - s)
-                const denom = (1 - skRe) * (1 - skRe) + skIm * skIm;
-                const zRe = (1 - skRe * skRe - skIm * skIm) / denom;
-                const zIm = (2 * skIm) / denom;
-
-                poles.push({ re: zRe, im: zIm });
-                zeros.push({ re: -1, im: 0 }); // Zeros at z = -1 for LPF
-            }
-        }
-
-        function designChebyshev1(N, Fc, Rp) {
-            poles = []; zeros = [];
-            const wc = Fc * Math.PI;
-            const Omegac = Math.tan(wc / 2);
-            
-            const eps = Math.sqrt(Math.pow(10, Rp / 10) - 1);
-            const v0 = Math.asinh(1 / eps) / N;
-
-            for (let k = 0; k < N; k++) {
-                const theta = Math.PI * (2 * k + 1) / (2 * N);
-                const skRe = -Omegac * Math.sinh(v0) * Math.sin(theta);
-                const skIm = Omegac * Math.cosh(v0) * Math.cos(theta);
-
-                const denom = (1 - skRe) * (1 - skRe) + skIm * skIm;
-                const zRe = (1 - skRe * skRe - skIm * skIm) / denom;
-                const zIm = (2 * skIm) / denom;
-
-                poles.push({ re: zRe, im: zIm });
-                zeros.push({ re: -1, im: 0 });
-            }
+        // Bilinear Transformation: s -> z
+        function sToZ(re, im) {
+            const denom = (1 - re) * (1 - re) + im * im;
+            return {
+                re: (1 - re * re - im * im) / denom,
+                im: (2 * im) / denom
+            };
         }
 
         function setMode(mode) {
