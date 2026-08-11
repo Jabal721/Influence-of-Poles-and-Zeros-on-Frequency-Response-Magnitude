@@ -178,6 +178,46 @@
             gap: 20px;
         }
 
+        /* Coefficients Inspector Panel */
+        .math-card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 0.88rem;
+        }
+        .math-card h3 {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #f1f5f9;
+        }
+        .coef-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .coef-box {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            line-height: 1.5;
+            max-height: 110px;
+            overflow-y: auto;
+        }
+        .coef-box-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            font-family: sans-serif;
+            font-size: 0.8rem;
+        }
+        .coef-box-title.num { color: #60a5fa; }
+        .coef-box-title.den { color: #f87171; }
+
         .side-by-side-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -189,13 +229,14 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 16px;
-            height: 260px;
+            height: 240px;
             position: relative;
         }
 
         @media (max-width: 900px) {
             .main-layout { grid-template-columns: 1fr; }
             .side-by-side-grid { grid-template-columns: 1fr; }
+            .coef-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -207,7 +248,6 @@
         </div>
         
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <!-- Top Toolbar Preset Controls -->
             <div class="top-toolbar">
                 <select id="filterSelect" onchange="onFilterTypeChange()">
                     <option value="custom">Arbitrary Pole-Zero Placement (IIR)</option>
@@ -247,6 +287,21 @@
         </div>
 
         <div class="charts-panel">
+            <!-- Filter Coefficients & Roots Display -->
+            <div class="math-card">
+                <h3>Filter Coefficients & Pole-Zero Coordinates</h3>
+                <div class="coef-grid">
+                    <div>
+                        <div class="coef-box-title num">Zeros & Numerator b[k]</div>
+                        <div class="coef-box" id="numDisplay">b = [1]</div>
+                    </div>
+                    <div>
+                        <div class="coef-box-title den">Poles & Denominator a[k]</div>
+                        <div class="coef-box" id="denDisplay">a = [1]</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="side-by-side-grid">
                 <div class="chart-box">
                     <canvas id="freqChart"></canvas>
@@ -262,18 +317,15 @@
     </div>
 
     <script>
-        // Data Store
         let poles = [];
         let zeros = [];
         let currentMode = 'default';
         let draggedRoot = null;
 
-        // Constants
         const CANVAS_SIZE = 300;
         const CENTER = CANVAS_SIZE / 2;
         const RADIUS = CANVAS_SIZE * 0.4; 
 
-        // Global Chart Declarations
         let freqChart, phaseChart, timeChart;
         const freqLabels = [];
         const timeLabels = [];
@@ -285,7 +337,6 @@
         }
         for (let i = 0; i <= 30; i++) timeLabels.push('n=' + i);
 
-        // Canvas Setup
         const canvas = document.getElementById('zPlane');
         const ctx = canvas.getContext('2d');
 
@@ -297,7 +348,6 @@
             setupCanvasListeners();
         });
 
-        // Dynamic Parameter Controls Render
         function onFilterTypeChange() {
             const type = document.getElementById('filterSelect').value;
             const container = document.getElementById('dynamicParams');
@@ -306,24 +356,24 @@
                 container.innerHTML = ``;
             } else if (type === 'butterworth' || type === 'bessel') {
                 container.innerHTML = `
-                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="6" style="width: 45px;"></label>
+                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="4" style="width: 45px;"></label>
                     <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
                 `;
             } else if (type === 'chebyshev1') {
                 container.innerHTML = `
-                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="6" style="width: 45px;"></label>
+                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="4" style="width: 45px;"></label>
                     <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
                     <label>Rp(dB): <input type="number" id="inpRipple" value="1" min="0.1" max="6" step="0.5" style="width: 50px;"></label>
                 `;
             } else if (type === 'chebyshev2') {
                 container.innerHTML = `
-                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="6" style="width: 45px;"></label>
+                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="4" style="width: 45px;"></label>
                     <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
                     <label>Rs(dB): <input type="number" id="inpAtten" value="20" min="10" max="60" step="5" style="width: 50px;"></label>
                 `;
             } else if (type === 'elliptic') {
                 container.innerHTML = `
-                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="6" style="width: 45px;"></label>
+                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="4" style="width: 45px;"></label>
                     <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
                     <label>Rp: <input type="number" id="inpRipple" value="1" min="0.1" max="6" step="0.5" style="width: 45px;"></label>
                     <label>Rs: <input type="number" id="inpAtten" value="20" min="10" max="60" step="5" style="width: 45px;"></label>
@@ -331,12 +381,11 @@
             }
         }
 
-        // Apply Designed Filter
         function applyFilterDesign() {
             const type = document.getElementById('filterSelect').value;
             if (type === 'custom') return;
 
-            const N = parseInt(document.getElementById('inpOrder')?.value || 2);
+            const N = Math.min(4, Math.max(1, parseInt(document.getElementById('inpOrder')?.value || 2)));
             const Fc = parseFloat(document.getElementById('inpFc')?.value || 0.3);
             const Rp = parseFloat(document.getElementById('inpRipple')?.value || 1);
             const Rs = parseFloat(document.getElementById('inpAtten')?.value || 20);
@@ -350,8 +399,7 @@
                     const theta = Math.PI * (2 * k + 1 + N) / (2 * N);
                     const skRe = Omegac * Math.cos(theta);
                     const skIm = Omegac * Math.sin(theta);
-                    const z = sToZ(skRe, skIm);
-                    poles.push(z);
+                    poles.push(sToZ(skRe, skIm));
                     zeros.push({ re: -1, im: 0 });
                 }
             } else if (type === 'chebyshev1') {
@@ -411,13 +459,50 @@
             calculateAndPlot();
         }
 
-        // Bilinear Transformation: s -> z
         function sToZ(re, im) {
             const denom = (1 - re) * (1 - re) + im * im;
             return {
                 re: (1 - re * re - im * im) / denom,
                 im: (2 * im) / denom
             };
+        }
+
+        // Polynomial Expansion from Roots: Product of (1 - r_i * z^-1)
+        function rootsToCoefficients(roots) {
+            let poly = [1];
+            roots.forEach(r => {
+                let nextPoly = new Array(poly.length + 1).fill(0);
+                for (let i = 0; i < poly.length; i++) {
+                    nextPoly[i] += poly[i];
+                    nextPoly[i + 1] -= poly[i] * r.re; // Real part contribution
+                }
+                poly = nextPoly;
+            });
+            return poly;
+        }
+
+        function updateCoefficientsUI() {
+            const numDisp = document.getElementById('numDisplay');
+            const denDisp = document.getElementById('denDisplay');
+
+            // Format Coordinates
+            let zCoords = zeros.length === 0 ? 'None' : zeros.map((z, i) => 
+                `z${i+1} = ${z.re >= 0 ? ' ' : ''}${z.re.toFixed(3)} ${z.im >= 0 ? '+' : '-'} ${Math.abs(z.im).toFixed(3)}j`
+            ).join('<br>');
+
+            let pCoords = poles.length === 0 ? 'None' : poles.map((p, i) => 
+                `p${i+1} = ${p.re >= 0 ? ' ' : ''}${p.re.toFixed(3)} ${p.im >= 0 ? '+' : '-'} ${Math.abs(p.im).toFixed(3)}j`
+            ).join('<br>');
+
+            // Calculate Coefficients
+            let b = rootsToCoefficients(zeros);
+            let a = rootsToCoefficients(poles);
+
+            let bStr = b.map((val, i) => `b[${i}] = ${val.toFixed(4)}`).join('<br>');
+            let aStr = a.map((val, i) => `a[${i}] = ${val.toFixed(4)}`).join('<br>');
+
+            numDisp.innerHTML = `<strong>Coordinates:</strong><br>${zCoords}<br><br><strong>Expanded b[k]:</strong><br>${bStr}`;
+            denDisp.innerHTML = `<strong>Coordinates:</strong><br>${pCoords}<br><br><strong>Expanded a[k]:</strong><br>${aStr}`;
         }
 
         function setMode(mode) {
@@ -603,6 +688,8 @@
         }
 
         function calculateAndPlot() {
+            updateCoefficientsUI();
+
             let isUnstable = poles.some(p => Math.hypot(p.re, p.im) > 1.0);
             const banner = document.getElementById('statusBanner');
             if (isUnstable) {
@@ -636,7 +723,6 @@
                 });
 
                 let magLinear = denMag === 0 ? 100 : numMag / denMag;
-                
                 const minLinear = 1e-6; 
                 let magdB = 20 * Math.log10(Math.max(magLinear, minLinear));
                 freqData.push(magdB);
