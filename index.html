@@ -542,7 +542,7 @@
                     return;
                 }
 
-                // If clicking empty space in placement modes, add and immediately set as draggedRoot
+                // Adding Poles
                 if (currentMode === 'pole') {
                     let newPole = { re: compCoord.re, im: compCoord.im };
                     poles.push(newPole);
@@ -550,7 +550,9 @@
                         poles.push({ re: compCoord.re, im: -compCoord.im });
                     }
                     draggedRoot = newPole; // Enable dragging immediately on click-and-drag
-                } else if (currentMode === 'zero') {
+                } 
+                // Adding Zeros
+                else if (currentMode === 'zero') {
                     let newZero = { re: compCoord.re, im: compCoord.im };
                     zeros.push(newZero);
                     if (document.getElementById('chkConjugate').checked && Math.abs(compCoord.im) > 0.01) {
