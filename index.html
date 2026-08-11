@@ -6,6 +6,18 @@
     <title>Z-Plane Pole-Zero Explorer</title>
     <!-- Chart.js Library via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- MathJax for rendering standard mathematical expressions -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    
     <style>
         :root {
             --bg-color: #0f172a;
@@ -178,7 +190,7 @@
             gap: 20px;
         }
 
-        /* Coefficients Inspector Panel */
+        /* Coefficients & Formula Inspector Panel */
         .math-card {
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
@@ -194,6 +206,17 @@
             font-size: 0.95rem;
             color: #f1f5f9;
         }
+        
+        .formula-display {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1.15rem;
+            overflow-x: auto;
+        }
+
         .coef-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -287,9 +310,14 @@
         </div>
 
         <div class="charts-panel">
-            <!-- Filter Coefficients & Roots Display -->
+            <!-- Transfer Function & Coefficients Display -->
             <div class="math-card">
-                <h3>Filter Coefficients & Pole-Zero Coordinates</h3>
+                <h3>Filter Transfer Function & System Coefficients</h3>
+                
+                <div class="formula-display" id="mathFormula">
+                    $$H(z) = \frac{B(z)}{A(z)} = \frac{1}{1}$$
+                </div>
+
                 <div class="coef-grid">
                     <div>
                         <div class="coef-box-title num">Zeros & Numerator b[k]</div>
@@ -467,23 +495,41 @@
             };
         }
 
-        // Polynomial Expansion from Roots: Product of (1 - r_i * z^-1)
         function rootsToCoefficients(roots) {
             let poly = [1];
             roots.forEach(r => {
                 let nextPoly = new Array(poly.length + 1).fill(0);
                 for (let i = 0; i < poly.length; i++) {
                     nextPoly[i] += poly[i];
-                    nextPoly[i + 1] -= poly[i] * r.re; // Real part contribution
+                    nextPoly[i + 1] -= poly[i] * r.re;
                 }
                 poly = nextPoly;
             });
             return poly;
         }
 
+        function formatPolyTex(coefs, varName) {
+            let terms = [];
+            coefs.forEach((c, idx) => {
+                if (Math.abs(c) < 1e-4) return;
+                let valStr = Math.abs(c).toFixed(3);
+                let sign = c < 0 ? ' - ' : (terms.length > 0 ? ' + ' : '');
+                
+                if (idx === 0) {
+                    terms.push(`${c < 0 ? '-' : ''}${valStr}`);
+                } else if (idx === 1) {
+                    terms.push(`${sign}${valStr}z^{-1}`);
+                } else {
+                    terms.push(`${sign}${valStr}z^{-${idx}}`);
+                }
+            });
+            return terms.length === 0 ? '0' : terms.join('');
+        }
+
         function updateCoefficientsUI() {
             const numDisp = document.getElementById('numDisplay');
             const denDisp = document.getElementById('denDisplay');
+            const mathFormula = document.getElementById('mathFormula');
 
             // Format Coordinates
             let zCoords = zeros.length === 0 ? 'None' : zeros.map((z, i) => 
@@ -503,6 +549,17 @@
 
             numDisp.innerHTML = `<strong>Coordinates:</strong><br>${zCoords}<br><br><strong>Expanded b[k]:</strong><br>${bStr}`;
             denDisp.innerHTML = `<strong>Coordinates:</strong><br>${pCoords}<br><br><strong>Expanded a[k]:</strong><br>${aStr}`;
+
+            // Build Tex Formula
+            let numTex = formatPolyTex(b, 'b');
+            let denTex = formatPolyTex(a, 'a');
+
+            let latexStr = `$$H(z) = \\frac{B(z)}{A(z)} = \\frac{${numTex}}{${denTex}}$$`;
+            mathFormula.innerHTML = latexStr;
+
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([mathFormula]);
+            }
         }
 
         function setMode(mode) {
