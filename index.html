@@ -190,30 +190,48 @@
             gap: 20px;
         }
 
-        /* Coefficients & Formula Inspector Panel */
+        /* Collapsible Math & Coefficients Card */
         .math-card {
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
             border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .math-card summary {
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #f1f5f9;
+            cursor: pointer;
+            user-select: none;
+            background-color: rgba(255, 255, 255, 0.02);
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .math-card summary:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .math-card-content {
             padding: 16px;
             display: flex;
             flex-direction: column;
             gap: 12px;
             font-size: 0.88rem;
+            border-top: 1px solid var(--border-color);
         }
-        .math-card h3 {
-            margin: 0;
-            font-size: 0.95rem;
-            color: #f1f5f9;
-        }
-        
+
         .formula-display {
             background: #0f172a;
             border: 1px solid var(--border-color);
             padding: 12px;
             border-radius: 6px;
             text-align: center;
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             overflow-x: auto;
         }
 
@@ -310,25 +328,30 @@
         </div>
 
         <div class="charts-panel">
-            <!-- Transfer Function & Coefficients Display -->
-            <div class="math-card">
-                <h3>Filter Transfer Function & System Coefficients</h3>
+            <!-- Collapsible Transfer Function & Coefficients Panel -->
+            <details class="math-card">
+                <summary>
+                    <span>📐 Filter Transfer Function & System Coefficients</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Click to expand)</span>
+                </summary>
                 
-                <div class="formula-display" id="mathFormula">
-                    $$H(z) = \frac{B(z)}{A(z)} = \frac{1}{1}$$
-                </div>
+                <div class="math-card-content">
+                    <div class="formula-display" id="mathFormula">
+                        $$H(z) = \frac{B(z)}{A(z)} = \frac{1}{1}$$
+                    </div>
 
-                <div class="coef-grid">
-                    <div>
-                        <div class="coef-box-title num">Zeros & Numerator b[k]</div>
-                        <div class="coef-box" id="numDisplay">b = [1]</div>
-                    </div>
-                    <div>
-                        <div class="coef-box-title den">Poles & Denominator a[k]</div>
-                        <div class="coef-box" id="denDisplay">a = [1]</div>
+                    <div class="coef-grid">
+                        <div>
+                            <div class="coef-box-title num">Zeros & Numerator b[k]</div>
+                            <div class="coef-box" id="numDisplay">b = [1]</div>
+                        </div>
+                        <div>
+                            <div class="coef-box-title den">Poles & Denominator a[k]</div>
+                            <div class="coef-box" id="denDisplay">a = [1]</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </details>
 
             <div class="side-by-side-grid">
                 <div class="chart-box">
