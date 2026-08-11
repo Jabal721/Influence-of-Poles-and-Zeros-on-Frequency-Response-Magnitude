@@ -3,21 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z-Plane Pole-Zero Explorer</title>
+    <title>Interactive Z-Plane Pole-Zero Explorer</title>
     <!-- Chart.js Library via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- MathJax for rendering standard mathematical expressions -->
-    <script>
-        MathJax = {
-            tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$']]
-            },
-            svg: { fontCache: 'global' }
-        };
-    </script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-    
     <style>
         :root {
             --bg-color: #0f172a;
@@ -43,55 +31,20 @@
 
         header {
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
+            padding-bottom: 10px;
         }
 
-        .header-left h1 { 
-            margin: 0; 
-            font-size: 1.4rem; 
-        }
-
-        .top-toolbar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            padding: 6px 12px;
-            border-radius: 6px;
-        }
-
-        .top-toolbar select, .top-toolbar input {
-            background-color: #0f172a;
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-        }
-
-        .top-toolbar label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
+        h1 { margin: 0; font-size: 1.5rem; }
+        p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.9rem; }
 
         .status-banner {
             background-color: #15803d;
             color: white;
-            padding: 6px 14px;
+            padding: 8px 16px;
             border-radius: 6px;
             font-weight: bold;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             transition: background-color 0.2s ease;
-            white-space: nowrap;
         }
         .status-banner.unstable {
             background-color: var(--pole-color);
@@ -121,11 +74,6 @@
             gap: 16px;
         }
 
-        .control-panel h3 {
-            margin: 0;
-            font-size: 1rem;
-        }
-
         .btn-group {
             display: flex;
             flex-direction: column;
@@ -142,15 +90,8 @@
             font-weight: 500;
             text-align: left;
             transition: all 0.2s;
-            font-size: 0.85rem;
         }
         button:hover { background-color: #475569; }
-        button.primary-btn {
-            background-color: #2563eb;
-            text-align: center;
-            border-color: #3b82f6;
-        }
-        button.primary-btn:hover { background-color: #1d4ed8; }
         button.active {
             background-color: #3b82f6;
             border-color: #60a5fa;
@@ -179,7 +120,6 @@
             cursor: default;
             width: 100%;
             aspect-ratio: 1;
-            touch-action: none;
         }
         canvas#zPlane.crosshair-cursor {
             cursor: crosshair;
@@ -190,74 +130,6 @@
             flex-direction: column;
             gap: 20px;
         }
-
-        .math-card {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .math-card summary {
-            padding: 12px 16px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: #f1f5f9;
-            cursor: pointer;
-            user-select: none;
-            background-color: rgba(255, 255, 255, 0.02);
-            transition: background-color 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .math-card summary:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-
-        .math-card-content {
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            font-size: 0.88rem;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .formula-display {
-            background: #0f172a;
-            border: 1px solid var(--border-color);
-            padding: 12px;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 1.1rem;
-            overflow-x: auto;
-        }
-
-        .coef-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-        .coef-box {
-            background: #0f172a;
-            border: 1px solid var(--border-color);
-            padding: 10px;
-            border-radius: 6px;
-            font-family: monospace;
-            line-height: 1.5;
-            max-height: 110px;
-            overflow-y: auto;
-        }
-        .coef-box-title {
-            font-weight: bold;
-            margin-bottom: 4px;
-            font-family: sans-serif;
-            font-size: 0.8rem;
-        }
-        .coef-box-title.num { color: #60a5fa; }
-        .coef-box-title.den { color: #f87171; }
 
         .side-by-side-grid {
             display: grid;
@@ -270,40 +142,24 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 16px;
-            height: 240px;
+            height: 260px;
             position: relative;
         }
 
         @media (max-width: 900px) {
             .main-layout { grid-template-columns: 1fr; }
             .side-by-side-grid { grid-template-columns: 1fr; }
-            .coef-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="header-left">
-            <h1>Z-Plane Pole-Zero Explorer</h1>
-        </div>
-        
-        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <div class="top-toolbar">
-                <select id="filterSelect" onchange="onFilterTypeChange()">
-                    <option value="custom">Arbitrary Pole-Zero Placement (IIR)</option>
-                    <option value="butterworth">Butterworth</option>
-                    <option value="chebyshev1">Chebyshev Type I</option>
-                    <option value="chebyshev2">Chebyshev Type II</option>
-                    <option value="elliptic">Elliptic</option>
-                    <option value="bessel">Bessel</option>
-                </select>
-
-                <div id="dynamicParams" style="display: flex; align-items: center; gap: 8px;"></div>
-
-                <button class="primary-btn" style="padding: 4px 10px; font-size: 0.8rem;" onclick="applyFilterDesign()">Apply</button>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>Z-Plane Pole-Zero Explorer</h1>
+                <p>Interactive DSP Design Suite: Visualizing Transfer Functions in Time & Frequency Domains</p>
             </div>
-
             <div id="statusBanner" class="status-banner">SYSTEM STABLE</div>
         </div>
     </header>
@@ -328,30 +184,6 @@
         </div>
 
         <div class="charts-panel">
-            <details class="math-card">
-                <summary>
-                    <span>📐 Filter Transfer Function & System Coefficients</span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">(Click to expand)</span>
-                </summary>
-                
-                <div class="math-card-content">
-                    <div class="formula-display" id="mathFormula">
-                        $$H(z) = \frac{B(z)}{A(z)} = \frac{1}{1}$$
-                    </div>
-
-                    <div class="coef-grid">
-                        <div>
-                            <div class="coef-box-title num">Zeros & Numerator b[k]</div>
-                            <div class="coef-box" id="numDisplay">b = [1]</div>
-                        </div>
-                        <div>
-                            <div class="coef-box-title den">Poles & Denominator a[k]</div>
-                            <div class="coef-box" id="denDisplay">a = [1]</div>
-                        </div>
-                    </div>
-                </div>
-            </details>
-
             <div class="side-by-side-grid">
                 <div class="chart-box">
                     <canvas id="freqChart"></canvas>
@@ -367,19 +199,23 @@
     </div>
 
     <script>
+        // Data Store
         let poles = [];
         let zeros = [];
-        let currentMode = 'default';
+        let currentMode = 'default'; // 'default', 'pole', 'zero', 'delete'
         let draggedRoot = null;
 
+        // Constants
         const CANVAS_SIZE = 300;
         const CENTER = CANVAS_SIZE / 2;
-        const RADIUS = CANVAS_SIZE * 0.35;
+        const RADIUS = CANVAS_SIZE * 0.4; 
 
+        // Global Chart Declarations
         let freqChart, phaseChart, timeChart;
         const freqLabels = [];
         const timeLabels = [];
 
+        // Precompute Labels
         const numFreqPoints = 100;
         for (let i = 0; i <= numFreqPoints; i++) {
             let val = i / numFreqPoints;
@@ -387,199 +223,16 @@
         }
         for (let i = 0; i <= 30; i++) timeLabels.push('n=' + i);
 
+        // Canvas Setup
         const canvas = document.getElementById('zPlane');
         const ctx = canvas.getContext('2d');
 
         window.addEventListener('load', () => {
             initCharts();
-            onFilterTypeChange();
             drawZPlane();
             calculateAndPlot();
             setupCanvasListeners();
         });
-
-        function onFilterTypeChange() {
-            const type = document.getElementById('filterSelect').value;
-            const container = document.getElementById('dynamicParams');
-
-            if (type === 'custom') {
-                container.innerHTML = ``;
-            } else if (type === 'butterworth' || type === 'bessel') {
-                container.innerHTML = `
-                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="4" style="width: 45px;"></label>
-                    <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
-                `;
-            } else if (type === 'chebyshev1') {
-                container.innerHTML = `
-                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="4" style="width: 45px;"></label>
-                    <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
-                    <label>Rp(dB): <input type="number" id="inpRipple" value="1" min="0.1" max="6" step="0.5" style="width: 50px;"></label>
-                `;
-            } else if (type === 'chebyshev2') {
-                container.innerHTML = `
-                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="4" style="width: 45px;"></label>
-                    <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
-                    <label>Rs(dB): <input type="number" id="inpAtten" value="20" min="10" max="60" step="5" style="width: 50px;"></label>
-                `;
-            } else if (type === 'elliptic') {
-                container.innerHTML = `
-                    <label>N: <input type="number" id="inpOrder" value="2" min="1" max="4" style="width: 45px;"></label>
-                    <label>Fc: <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05" style="width: 55px;"></label>
-                    <label>Rp: <input type="number" id="inpRipple" value="1" min="0.1" max="6" step="0.5" style="width: 45px;"></label>
-                    <label>Rs: <input type="number" id="inpAtten" value="20" min="10" max="60" step="5" style="width: 45px;"></label>
-                `;
-            }
-        }
-
-        function applyFilterDesign() {
-            const type = document.getElementById('filterSelect').value;
-            if (type === 'custom') return;
-
-            const N = Math.min(4, Math.max(1, parseInt(document.getElementById('inpOrder')?.value || 2)));
-            const Fc = parseFloat(document.getElementById('inpFc')?.value || 0.3);
-            const Rp = parseFloat(document.getElementById('inpRipple')?.value || 1);
-            const Rs = parseFloat(document.getElementById('inpAtten')?.value || 20);
-
-            poles = []; zeros = [];
-            const wc = Fc * Math.PI;
-            const Omegac = Math.tan(wc / 2);
-
-            if (type === 'butterworth') {
-                for (let k = 0; k < N; k++) {
-                    const theta = Math.PI * (2 * k + 1 + N) / (2 * N);
-                    const skRe = Omegac * Math.cos(theta);
-                    const skIm = Omegac * Math.sin(theta);
-                    poles.push(sToZ(skRe, skIm));
-                    zeros.push({ re: -1, im: 0 });
-                }
-            } else if (type === 'chebyshev1') {
-                const eps = Math.sqrt(Math.pow(10, Rp / 10) - 1);
-                const v0 = Math.asinh(1 / eps) / N;
-                for (let k = 0; k < N; k++) {
-                    const theta = Math.PI * (2 * k + 1) / (2 * N);
-                    const skRe = -Omegac * Math.sinh(v0) * Math.sin(theta);
-                    const skIm = Omegac * Math.cosh(v0) * Math.cos(theta);
-                    poles.push(sToZ(skRe, skIm));
-                    zeros.push({ re: -1, im: 0 });
-                }
-            } else if (type === 'chebyshev2') {
-                const deltaS = Math.pow(10, -Rs / 20);
-                const v0 = Math.asinh(1 / Math.sqrt(1 / (deltaS * deltaS) - 1)) / N;
-                for (let k = 0; k < N; k++) {
-                    const theta = Math.PI * (2 * k + 1) / (2 * N);
-                    const skRe = -Omegac * Math.sinh(v0) * Math.sin(theta);
-                    const skIm = Omegac * Math.cosh(v0) * Math.cos(theta);
-                    const invMag2 = skRe*skRe + skIm*skIm;
-                    poles.push(sToZ(skRe / invMag2, skIm / invMag2));
-
-                    if (Math.abs(Math.cos(theta)) > 1e-4) {
-                        const zeroIm = Omegac / Math.cos(theta);
-                        zeros.push(sToZ(0, zeroIm));
-                    } else {
-                        zeros.push({ re: -1, im: 0 });
-                    }
-                }
-            } else if (type === 'elliptic') {
-                const eps = Math.sqrt(Math.pow(10, Rp / 10) - 1);
-                const v0 = Math.asinh(1 / eps) / N;
-                for (let k = 0; k < N; k++) {
-                    const theta = Math.PI * (2 * k + 1) / (2 * N);
-                    const skRe = -0.8 * Omegac * Math.sinh(v0) * Math.sin(theta);
-                    const skIm = 1.1 * Omegac * Math.cosh(v0) * Math.cos(theta);
-                    poles.push(sToZ(skRe, skIm));
-                    
-                    if (k % 2 === 0) {
-                        const zIm = (1.5 / Math.sin(theta)) * Omegac;
-                        zeros.push(sToZ(0, zIm));
-                    } else {
-                        zeros.push({ re: -1, im: 0 });
-                    }
-                }
-            } else if (type === 'bessel') {
-                for (let k = 0; k < N; k++) {
-                    const theta = Math.PI * (2 * k + 1 + N) / (2 * N);
-                    const skRe = 1.2 * Omegac * Math.cos(theta);
-                    const skIm = 0.8 * Omegac * Math.sin(theta);
-                    poles.push(sToZ(skRe, skIm));
-                    zeros.push({ re: -1, im: 0 });
-                }
-            }
-
-            drawZPlane();
-            calculateAndPlot();
-        }
-
-        function sToZ(re, im) {
-            const denom = (1 - re) * (1 - re) + im * im;
-            return {
-                re: (1 - re * re - im * im) / denom,
-                im: (2 * im) / denom
-            };
-        }
-
-        function rootsToCoefficients(roots) {
-            let poly = [1];
-            roots.forEach(r => {
-                let nextPoly = new Array(poly.length + 1).fill(0);
-                for (let i = 0; i < poly.length; i++) {
-                    nextPoly[i] += poly[i];
-                    nextPoly[i + 1] -= poly[i] * r.re;
-                }
-                poly = nextPoly;
-            });
-            return poly;
-        }
-
-        function formatPolyTex(coefs, varName) {
-            let terms = [];
-            coefs.forEach((c, idx) => {
-                if (Math.abs(c) < 1e-4) return;
-                let valStr = Math.abs(c).toFixed(3);
-                let sign = c < 0 ? ' - ' : (terms.length > 0 ? ' + ' : '');
-                
-                if (idx === 0) {
-                    terms.push(`${c < 0 ? '-' : ''}${valStr}`);
-                } else if (idx === 1) {
-                    terms.push(`${sign}${valStr}z^{-1}`);
-                } else {
-                    terms.push(`${sign}${valStr}z^{-${idx}}`);
-                }
-            });
-            return terms.length === 0 ? '0' : terms.join('');
-        }
-
-        function updateCoefficientsUI() {
-            const numDisp = document.getElementById('numDisplay');
-            const denDisp = document.getElementById('denDisplay');
-            const mathFormula = document.getElementById('mathFormula');
-
-            let zCoords = zeros.length === 0 ? 'None' : zeros.map((z, i) => 
-                `z${i+1} = ${z.re >= 0 ? ' ' : ''}${z.re.toFixed(3)} ${z.im >= 0 ? '+' : '-'} ${Math.abs(z.im).toFixed(3)}j`
-            ).join('<br>');
-
-            let pCoords = poles.length === 0 ? 'None' : poles.map((p, i) => 
-                `p${i+1} = ${p.re >= 0 ? ' ' : ''}${p.re.toFixed(3)} ${p.im >= 0 ? '+' : '-'} ${Math.abs(p.im).toFixed(3)}j`
-            ).join('<br>');
-
-            let b = rootsToCoefficients(zeros);
-            let a = rootsToCoefficients(poles);
-
-            let bStr = b.map((val, i) => `b[${i}] = ${val.toFixed(4)}`).join('<br>');
-            let aStr = a.map((val, i) => `a[${i}] = ${val.toFixed(4)}`).join('<br>');
-
-            numDisp.innerHTML = `<strong>Coordinates:</strong><br>${zCoords}<br><br><strong>Expanded b[k]:</strong><br>${bStr}`;
-            denDisp.innerHTML = `<strong>Coordinates:</strong><br>${pCoords}<br><br><strong>Expanded a[k]:</strong><br>${aStr}`;
-
-            let numTex = formatPolyTex(b, 'b');
-            let denTex = formatPolyTex(a, 'a');
-
-            let latexStr = `$$H(z) = \\frac{B(z)}{A(z)} = \\frac{${numTex}}{${denTex}}$$`;
-            mathFormula.innerHTML = latexStr;
-
-            if (window.MathJax && MathJax.typesetPromise) {
-                MathJax.typesetPromise([mathFormula]);
-            }
-        }
 
         function setMode(mode) {
             currentMode = mode;
@@ -588,6 +241,7 @@
             document.getElementById('btnZero').classList.toggle('active', mode === 'zero');
             document.getElementById('btnDelete').classList.toggle('active', mode === 'delete');
             
+            // Toggle cursor styling for clarity
             if (mode === 'pole' || mode === 'zero') {
                 canvas.classList.add('crosshair-cursor');
             } else {
@@ -598,12 +252,11 @@
         function clearAll() {
             poles = [];
             zeros = [];
-            document.getElementById('filterSelect').value = 'custom';
-            onFilterTypeChange();
             drawZPlane();
             calculateAndPlot();
         }
 
+        // Initialize All Charts
         function initCharts() {
             const chartConfigBase = {
                 type: 'line',
@@ -619,12 +272,13 @@
                 }
             };
 
+            // Magnitude Chart
             freqChart = new Chart(document.getElementById('freqChart').getContext('2d'), {
                 ...chartConfigBase,
                 data: {
                     labels: freqLabels,
                     datasets: [{
-                        label: 'Magnitude Response |H(e^jω)| (dB)',
+                        label: 'Magnitude Response |H(e^jω)|',
                         data: [],
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.05)',
@@ -637,19 +291,12 @@
                     ...chartConfigBase.options,
                     scales: {
                         ...chartConfigBase.options.scales,
-                        y: { 
-                            ...chartConfigBase.options.scales.y, 
-                            min: -80,
-                            suggestedMax: 10,
-                            ticks: {
-                                color: '#94a3b8',
-                                callback: function(value) { return value + ' dB'; }
-                            }
-                        }
+                        y: { ...chartConfigBase.options.scales.y, min: 0, suggestedMax: 3 }
                     }
                 }
             });
 
+            // Phase Chart
             phaseChart = new Chart(document.getElementById('phaseChart').getContext('2d'), {
                 ...chartConfigBase,
                 data: {
@@ -686,6 +333,7 @@
                 }
             });
 
+            // Time Domain Chart
             timeChart = new Chart(document.getElementById('timeChart').getContext('2d'), {
                 type: 'bar',
                 data: {
@@ -709,6 +357,7 @@
             });
         }
 
+        // Geometric Transforms
         function pixelToComplex(x, y) {
             return {
                 re: (x - CENTER) / RADIUS,
@@ -723,10 +372,11 @@
             };
         }
 
+        // Draw the Z-Plane Canvas Visuals
         function drawZPlane() {
             ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-            // Axes
+            // Cartesian Axes
             ctx.strokeStyle = '#334155';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -734,7 +384,7 @@
             ctx.moveTo(CENTER, 0); ctx.lineTo(CENTER, CANVAS_SIZE);
             ctx.stroke();
 
-            // Unit Circle
+            // Unit Circle Boundary
             ctx.strokeStyle = '#64748b';
             ctx.lineWidth = 1.5;
             ctx.setLineDash([4, 4]);
@@ -742,26 +392,6 @@
             ctx.arc(CENTER, CENTER, RADIUS, 0, 2 * Math.PI);
             ctx.stroke();
             ctx.setLineDash([]);
-
-            // Labels
-            ctx.font = '11px sans-serif';
-            ctx.fillStyle = '#94a3b8';
-
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('z = 1 (ω = 0)', CENTER + RADIUS + 6, CENTER);
-
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('z = -1 (ω = π)', CENTER - RADIUS - 6, CENTER);
-
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText('z = j (ω = π/2)', CENTER, CENTER - RADIUS - 6);
-
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText('z = -j (ω = -π/2)', CENTER, CENTER + RADIUS + 6);
 
             const drawMarker = (list, isPole) => {
                 list.forEach(r => {
@@ -785,9 +415,8 @@
             drawMarker(zeros, false);
         }
 
+        // Core Mathematical Processing Routine
         function calculateAndPlot() {
-            updateCoefficientsUI();
-
             let isUnstable = poles.some(p => Math.hypot(p.re, p.im) > 1.0);
             const banner = document.getElementById('statusBanner');
             if (isUnstable) {
@@ -820,10 +449,8 @@
                     totalPhase -= Math.atan2(wIm - p.im, wRe - p.re);
                 });
 
-                let magLinear = denMag === 0 ? 100 : numMag / denMag;
-                const minLinear = 1e-6; 
-                let magdB = 20 * Math.log10(Math.max(magLinear, minLinear));
-                freqData.push(magdB);
+                let mag = denMag === 0 ? 100 : numMag / denMag;
+                freqData.push(mag);
 
                 while (totalPhase > Math.PI) totalPhase -= 2 * Math.PI;
                 while (totalPhase < -Math.PI) totalPhase += 2 * Math.PI;
@@ -864,156 +491,105 @@
             timeChart.options.scales.y.max = maxVal > 2 ? Math.min(50, maxVal * 1.2) : 2;
 
             freqChart.data.datasets[0].data = freqData;
+            freqChart.update('none');
+
             phaseChart.data.datasets[0].data = phaseData;
+            phaseChart.update('none');
+
             timeChart.data.datasets[0].data = timeData;
-
-            freqChart.update();
-            phaseChart.update();
-            timeChart.update();
+            timeChart.update('none');
         }
 
-        function findConjugateIndex(arr, targetIdx) {
-            const target = arr[targetIdx];
-            if (!target || Math.abs(target.im) < 0.01) return -1;
-            let bestIdx = -1;
-            let minDist = Infinity;
-            arr.forEach((item, i) => {
-                if (i !== targetIdx) {
-                    let dist = Math.hypot(item.re - target.re, item.im + target.im);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        bestIdx = i;
-                    }
-                }
-            });
-            return minDist < 0.35 ? bestIdx : -1;
-        }
-
+        // Mouse Action Pipeline Configuration Setup
         function setupCanvasListeners() {
-            const getCanvasPos = (e) => {
+            const findClosest = (pt, list) => {
+                let match = null, minD = 15; 
+                list.forEach((r, idx) => {
+                    let pPix = complexToPixel(r.re, r.im);
+                    let d = Math.hypot(pt.x - pPix.x, pt.y - pPix.y);
+                    if (d < minD) { minD = d; match = { list: list, index: idx }; }
+                });
+                return match;
+            };
+
+            canvas.addEventListener('mousedown', (e) => {
                 const rect = canvas.getBoundingClientRect();
-                return {
-                    x: (e.clientX - rect.left) * (canvas.width / rect.width),
-                    y: (e.clientY - rect.top) * (canvas.height / rect.height)
+                const mousePt = { 
+                    x: (e.clientX - rect.left) * (canvas.width / rect.width), 
+                    y: (e.clientY - rect.top) * (canvas.height / rect.height) 
                 };
-            };
+                const compCoord = pixelToComplex(mousePt.x, mousePt.y);
 
-            canvas.addEventListener('pointerdown', (e) => {
-                canvas.setPointerCapture(e.pointerId);
-                const pos = getCanvasPos(e);
-                const complex = pixelToComplex(pos.x, pos.y);
-                const isConjugate = document.getElementById('chkConjugate').checked;
+                let target = findClosest(mousePt, poles) || findClosest(mousePt, zeros);
 
+                if (currentMode === 'delete') {
+                    if (target) {
+                        let item = target.list[target.index];
+                        target.list.splice(target.index, 1);
+                        if (document.getElementById('chkConjugate').checked && Math.abs(item.im) > 0.001) {
+                            let cIdx = target.list.findIndex(r => Math.abs(r.re - item.re) < 0.01 && Math.abs(r.im + item.im) < 0.01);
+                            if (cIdx !== -1) target.list.splice(cIdx, 1);
+                        }
+                        drawZPlane();
+                        calculateAndPlot();
+                    }
+                    return;
+                }
+
+                // If clicking an existing root in any mode (except delete), grab it to move
+                if (target) {
+                    draggedRoot = target.list[target.index];
+                    return;
+                }
+
+                // If clicking empty space in placement modes, add and immediately set as draggedRoot
                 if (currentMode === 'pole') {
-                    let pIdx = poles.length;
-                    poles.push({ re: complex.re, im: complex.im });
-                    let cIdx = -1;
-                    if (isConjugate && Math.abs(complex.im) > 0.05) {
-                        poles.push({ re: complex.re, im: -complex.im });
-                        cIdx = poles.length - 1;
+                    let newPole = { re: compCoord.re, im: compCoord.im };
+                    poles.push(newPole);
+                    if (document.getElementById('chkConjugate').checked && Math.abs(compCoord.im) > 0.01) {
+                        poles.push({ re: compCoord.re, im: -compCoord.im });
                     }
-                    draggedRoot = { type: 'pole', index: pIdx, conjIndex: cIdx };
+                    draggedRoot = newPole; // Enable dragging immediately on click-and-drag
                 } else if (currentMode === 'zero') {
-                    let zIdx = zeros.length;
-                    zeros.push({ re: complex.re, im: complex.im });
-                    let cIdx = -1;
-                    if (isConjugate && Math.abs(complex.im) > 0.05) {
-                        zeros.push({ re: complex.re, im: -complex.im });
-                        cIdx = zeros.length - 1;
+                    let newZero = { re: compCoord.re, im: compCoord.im };
+                    zeros.push(newZero);
+                    if (document.getElementById('chkConjugate').checked && Math.abs(compCoord.im) > 0.01) {
+                        zeros.push({ re: compCoord.re, im: -compCoord.im });
                     }
-                    draggedRoot = { type: 'zero', index: zIdx, conjIndex: cIdx };
-                } else if (currentMode === 'delete') {
-                    const threshold = 0.25;
-                    let pIdx = poles.findIndex(p => Math.hypot(p.re - complex.re, p.im - complex.im) < threshold);
-                    if (pIdx !== -1) {
-                        let conjIdx = isConjugate ? findConjugateIndex(poles, pIdx) : -1;
-                        if (conjIdx !== -1) {
-                            poles = poles.filter((_, idx) => idx !== pIdx && idx !== conjIdx);
-                        } else {
-                            poles.splice(pIdx, 1);
-                        }
-                    } else {
-                        let zIdx = zeros.findIndex(z => Math.hypot(z.re - complex.re, z.im - complex.im) < threshold);
-                        if (zIdx !== -1) {
-                            let conjIdx = isConjugate ? findConjugateIndex(zeros, zIdx) : -1;
-                            if (conjIdx !== -1) {
-                                zeros = zeros.filter((_, idx) => idx !== zIdx && idx !== conjIdx);
-                            } else {
-                                zeros.splice(zIdx, 1);
-                            }
-                        }
-                    }
-                } else if (currentMode === 'default') {
-                    const threshold = 0.25;
-                    let pIdx = poles.findIndex(p => Math.hypot(p.re - complex.re, p.im - complex.im) < threshold);
-                    if (pIdx !== -1) {
-                        let conjIdx = isConjugate ? findConjugateIndex(poles, pIdx) : -1;
-                        draggedRoot = { type: 'pole', index: pIdx, conjIndex: conjIdx };
-                    } else {
-                        let zIdx = zeros.findIndex(z => Math.hypot(z.re - complex.re, z.im - complex.im) < threshold);
-                        if (zIdx !== -1) {
-                            let conjIdx = isConjugate ? findConjugateIndex(zeros, zIdx) : -1;
-                            draggedRoot = { type: 'zero', index: zIdx, conjIndex: conjIdx };
-                        }
-                    }
-                }
-
-                if (currentMode !== 'default') {
-                    document.getElementById('filterSelect').value = 'custom';
-                    onFilterTypeChange();
+                    draggedRoot = newZero; // Enable dragging immediately on click-and-drag
                 }
 
                 drawZPlane();
                 calculateAndPlot();
             });
 
-            canvas.addEventListener('pointermove', (e) => {
+            canvas.addEventListener('mousemove', (e) => {
                 if (!draggedRoot) return;
-                const pos = getCanvasPos(e);
-                const complex = pixelToComplex(pos.x, pos.y);
-                const isConjugate = document.getElementById('chkConjugate').checked;
+                const rect = canvas.getBoundingClientRect();
+                const mousePt = { 
+                    x: (e.clientX - rect.left) * (canvas.width / rect.width), 
+                    y: (e.clientY - rect.top) * (canvas.height / rect.height) 
+                };
+                const compCoord = pixelToComplex(mousePt.x, mousePt.y);
 
-                const list = draggedRoot.type === 'pole' ? poles : zeros;
+                let oldIm = draggedRoot.im;
+                draggedRoot.re = compCoord.re;
+                draggedRoot.im = compCoord.im;
 
-                // Move primary target
-                list[draggedRoot.index] = { re: complex.re, im: complex.im };
-
-                // Handle conjugate pairing during live drag
-                if (isConjugate) {
-                    if (Math.abs(complex.im) > 0.02) {
-                        if (draggedRoot.conjIndex === undefined || draggedRoot.conjIndex === -1 || !list[draggedRoot.conjIndex]) {
-                            let foundIdx = findConjugateIndex(list, draggedRoot.index);
-                            if (foundIdx !== -1) {
-                                draggedRoot.conjIndex = foundIdx;
-                            } else {
-                                list.push({ re: complex.re, im: -complex.im });
-                                draggedRoot.conjIndex = list.length - 1;
-                            }
-                        }
-                        if (draggedRoot.conjIndex !== -1 && list[draggedRoot.conjIndex]) {
-                            list[draggedRoot.conjIndex] = { re: complex.re, im: -complex.im };
-                        }
-                    } else if (draggedRoot.conjIndex !== -1 && list[draggedRoot.conjIndex]) {
-                        // Snap conjugate to real axis if close to zero
-                        list[draggedRoot.conjIndex] = { re: complex.re, im: 0 };
+                if (document.getElementById('chkConjugate').checked && Math.abs(oldIm) > 0.001) {
+                    let list = poles.includes(draggedRoot) ? poles : zeros;
+                    let sister = list.find(r => r !== draggedRoot && Math.abs(r.re - draggedRoot.re) < 0.1 && Math.sign(r.im) !== Math.sign(oldIm));
+                    if (sister) {
+                        sister.re = compCoord.re;
+                        sister.im = -compCoord.im;
                     }
                 }
 
-                document.getElementById('filterSelect').value = 'custom';
-                onFilterTypeChange();
                 drawZPlane();
                 calculateAndPlot();
             });
 
-            const stopDragging = (e) => {
-                if (e && e.pointerId) {
-                    try { canvas.releasePointerCapture(e.pointerId); } catch(err) {}
-                }
-                draggedRoot = null;
-            };
-
-            canvas.addEventListener('pointerup', stopDragging);
-            canvas.addEventListener('pointercancel', stopDragging);
+            window.addEventListener('mouseup', () => { draggedRoot = null; });
         }
     </script>
 </body>
