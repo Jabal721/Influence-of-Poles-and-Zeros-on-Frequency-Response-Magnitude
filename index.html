@@ -59,7 +59,7 @@
 
         .main-layout {
             display: grid;
-            grid-template-columns: 320px 1fr;
+            grid-template-columns: 340px 1fr;
             gap: 20px;
             align-items: start;
         }
@@ -72,6 +72,43 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
+        }
+
+        /* Collapsible Styling */
+        details.filter-drawer {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #0f172a;
+            overflow: hidden;
+        }
+        details.filter-drawer summary {
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #334155;
+            color: var(--text-color);
+            user-select: none;
+            font-size: 0.9rem;
+        }
+        .drawer-content {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+        .drawer-content label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drawer-content input, .drawer-content select {
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 4px;
+            width: 100px;
         }
 
         .btn-group {
@@ -92,6 +129,12 @@
             transition: all 0.2s;
         }
         button:hover { background-color: #475569; }
+        button.primary-btn {
+            background-color: #2563eb;
+            text-align: center;
+            border-color: #3b82f6;
+        }
+        button.primary-btn:hover { background-color: #1d4ed8; }
         button.active {
             background-color: #3b82f6;
             border-color: #60a5fa;
@@ -166,6 +209,27 @@
 
     <div class="main-layout">
         <div class="control-panel">
+            <h3>Filter Preset Selector</h3>
+            
+            <!-- Collapsible Filter Preset Drawer -->
+            <details id="filterDrawer" class="filter-drawer" open>
+                <summary>⚙️ Design Prototype Filter</summary>
+                <div class="drawer-content">
+                    <label>
+                        <span>Filter Type:</span>
+                        <select id="filterSelect" onchange="onFilterTypeChange()">
+                            <option value="custom">Custom (Manual)</option>
+                            <option value="butterworth">Butterworth LPF</option>
+                            <option value="chebyshev1">Chebyshev Type I</option>
+                        </select>
+                    </label>
+
+                    <div id="dynamicParams"></div>
+
+                    <button class="primary-btn" onclick="applyPresetAndCollapse()">Apply Filter & Collapse</button>
+                </div>
+            </details>
+
             <h3>Interactive Tools</h3>
             <div class="btn-group">
                 <button id="btnDefault" class="active" onclick="setMode('default')">🔍 Inspect / Move Only (Safe)</button>
@@ -202,7 +266,7 @@
         // Data Store
         let poles = [];
         let zeros = [];
-        let currentMode = 'default'; // 'default', 'pole', 'zero', 'delete'
+        let currentMode = 'default';
         let draggedRoot = null;
 
         // Constants
@@ -215,7 +279,6 @@
         const freqLabels = [];
         const timeLabels = [];
 
-        // Precompute Labels
         const numFreqPoints = 100;
         for (let i = 0; i <= numFreqPoints; i++) {
             let val = i / numFreqPoints;
@@ -229,10 +292,97 @@
 
         window.addEventListener('load', () => {
             initCharts();
+            onFilterTypeChange();
             drawZPlane();
             calculateAndPlot();
             setupCanvasListeners();
         });
+
+        // Dynamic Controls Renderer
+        function onFilterTypeChange() {
+            const type = document.getElementById('filterSelect').value;
+            const container = document.getElementById('dynamicParams');
+
+            if (type === 'custom') {
+                container.innerHTML = `<p style="margin:4px 0; color:var(--text-muted);">Use interactive buttons below to place poles/zeros directly on the Z-plane.</p>`;
+            } else if (type === 'butterworth') {
+                container.innerHTML = `
+                    <label>Order (N): <input type="number" id="inpOrder" value="2" min="1" max="8"></label>
+                    <label>Cutoff (0 to 1): <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05"></label>
+                `;
+            } else if (type === 'chebyshev1') {
+                container.innerHTML = `
+                    <label>Order (N): <input type="number" id="inpOrder" value="2" min="1" max="8"></label>
+                    <label>Cutoff (0 to 1): <input type="number" id="inpFc" value="0.3" min="0.05" max="0.95" step="0.05"></label>
+                    <label>Ripple (dB): <input type="number" id="inpRipple" value="1" min="0.1" max="6" step="0.5"></label>
+                `;
+            }
+        }
+
+        // Filter Math Engine & Drawer Collapse Logic
+        function applyPresetAndCollapse() {
+            const type = document.getElementById('filterSelect').value;
+            
+            if (type === 'butterworth') {
+                const N = parseInt(document.getElementById('inpOrder').value);
+                const Fc = parseFloat(document.getElementById('inpFc').value); // Normalized frequency [0, 1] mapped to pi
+                designButterworth(N, Fc);
+            } else if (type === 'chebyshev1') {
+                const N = parseInt(document.getElementById('inpOrder').value);
+                const Fc = parseFloat(document.getElementById('inpFc').value);
+                const Rp = parseFloat(document.getElementById('inpRipple').value);
+                designChebyshev1(N, Fc, Rp);
+            }
+
+            drawZPlane();
+            calculateAndPlot();
+
+            // Auto Collapse Drawer
+            document.getElementById('filterDrawer').removeAttribute('open');
+        }
+
+        function designButterworth(N, Fc) {
+            poles = []; zeros = [];
+            const wc = Fc * Math.PI;
+            // Bilinear Transform Mapping (Analog s-plane prototype to Z-plane)
+            const Omegac = Math.tan(wc / 2);
+
+            for (let k = 0; k < N; k++) {
+                const theta = Math.PI * (2 * k + 1 + N) / (2 * N);
+                const skRe = Omegac * Math.cos(theta);
+                const skIm = Omegac * Math.sin(theta);
+
+                // Map s to z via bilinear transform: z = (1 + s) / (1 - s)
+                const denom = (1 - skRe) * (1 - skRe) + skIm * skIm;
+                const zRe = (1 - skRe * skRe - skIm * skIm) / denom;
+                const zIm = (2 * skIm) / denom;
+
+                poles.push({ re: zRe, im: zIm });
+                zeros.push({ re: -1, im: 0 }); // Zeros at z = -1 for LPF
+            }
+        }
+
+        function designChebyshev1(N, Fc, Rp) {
+            poles = []; zeros = [];
+            const wc = Fc * Math.PI;
+            const Omegac = Math.tan(wc / 2);
+            
+            const eps = Math.sqrt(Math.pow(10, Rp / 10) - 1);
+            const v0 = Math.asinh(1 / eps) / N;
+
+            for (let k = 0; k < N; k++) {
+                const theta = Math.PI * (2 * k + 1) / (2 * N);
+                const skRe = -Omegac * Math.sinh(v0) * Math.sin(theta);
+                const skIm = Omegac * Math.cosh(v0) * Math.cos(theta);
+
+                const denom = (1 - skRe) * (1 - skRe) + skIm * skIm;
+                const zRe = (1 - skRe * skRe - skIm * skIm) / denom;
+                const zIm = (2 * skIm) / denom;
+
+                poles.push({ re: zRe, im: zIm });
+                zeros.push({ re: -1, im: 0 });
+            }
+        }
 
         function setMode(mode) {
             currentMode = mode;
@@ -241,7 +391,6 @@
             document.getElementById('btnZero').classList.toggle('active', mode === 'zero');
             document.getElementById('btnDelete').classList.toggle('active', mode === 'delete');
             
-            // Toggle cursor styling for clarity
             if (mode === 'pole' || mode === 'zero') {
                 canvas.classList.add('crosshair-cursor');
             } else {
@@ -252,11 +401,12 @@
         function clearAll() {
             poles = [];
             zeros = [];
+            document.getElementById('filterSelect').value = 'custom';
+            onFilterTypeChange();
             drawZPlane();
             calculateAndPlot();
         }
 
-        // Initialize All Charts
         function initCharts() {
             const chartConfigBase = {
                 type: 'line',
@@ -272,7 +422,6 @@
                 }
             };
 
-            // Magnitude Chart (dB Scale)
             freqChart = new Chart(document.getElementById('freqChart').getContext('2d'), {
                 ...chartConfigBase,
                 data: {
@@ -304,7 +453,6 @@
                 }
             });
 
-            // Phase Chart
             phaseChart = new Chart(document.getElementById('phaseChart').getContext('2d'), {
                 ...chartConfigBase,
                 data: {
@@ -341,7 +489,6 @@
                 }
             });
 
-            // Time Domain Chart
             timeChart = new Chart(document.getElementById('timeChart').getContext('2d'), {
                 type: 'bar',
                 data: {
@@ -365,7 +512,6 @@
             });
         }
 
-        // Geometric Transforms
         function pixelToComplex(x, y) {
             return {
                 re: (x - CENTER) / RADIUS,
@@ -380,11 +526,9 @@
             };
         }
 
-        // Draw the Z-Plane Canvas Visuals
         function drawZPlane() {
             ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-            // Cartesian Axes
             ctx.strokeStyle = '#334155';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -392,7 +536,6 @@
             ctx.moveTo(CENTER, 0); ctx.lineTo(CENTER, CANVAS_SIZE);
             ctx.stroke();
 
-            // Unit Circle Boundary
             ctx.strokeStyle = '#64748b';
             ctx.lineWidth = 1.5;
             ctx.setLineDash([4, 4]);
@@ -423,7 +566,6 @@
             drawMarker(zeros, false);
         }
 
-        // Core Mathematical Processing Routine
         function calculateAndPlot() {
             let isUnstable = poles.some(p => Math.hypot(p.re, p.im) > 1.0);
             const banner = document.getElementById('statusBanner');
@@ -459,7 +601,6 @@
 
                 let magLinear = denMag === 0 ? 100 : numMag / denMag;
                 
-                // Convert linear magnitude to dB scale with a lower bound (-120 dB)
                 const minLinear = 1e-6; 
                 let magdB = 20 * Math.log10(Math.max(magLinear, minLinear));
                 freqData.push(magdB);
@@ -512,7 +653,6 @@
             timeChart.update('none');
         }
 
-        // Mouse Action Pipeline Configuration Setup
         function setupCanvasListeners() {
             const findClosest = (pt, list) => {
                 let match = null, minD = 15; 
@@ -548,13 +688,11 @@
                     return;
                 }
 
-                // In default mode or drawing mode, if we catch an existing root, drag it
                 if (target) {
                     draggedRoot = target.list[target.index];
                     return;
                 }
 
-                // If clicking an empty area, only add roots if in explicit drawing modes
                 if (currentMode === 'pole') {
                     poles.push({ re: compCoord.re, im: compCoord.im });
                     if (document.getElementById('chkConjugate').checked && Math.abs(compCoord.im) > 0.01) {
