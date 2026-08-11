@@ -190,6 +190,7 @@
             gap: 20px;
         }
 
+        /* Collapsible Math & Coefficients Card */
         .math-card {
             background-color: var(--panel-bg);
             border: 1px solid var(--border-color);
@@ -327,6 +328,7 @@
         </div>
 
         <div class="charts-panel">
+            <!-- Collapsible Transfer Function & Coefficients Panel -->
             <details class="math-card">
                 <summary>
                     <span>📐 Filter Transfer Function & System Coefficients</span>
@@ -373,7 +375,7 @@
 
         const CANVAS_SIZE = 300;
         const CENTER = CANVAS_SIZE / 2;
-        const RADIUS = CANVAS_SIZE * 0.35;
+        const RADIUS = CANVAS_SIZE * 0.4; 
 
         let freqChart, phaseChart, timeChart;
         const freqLabels = [];
@@ -552,6 +554,7 @@
             const denDisp = document.getElementById('denDisplay');
             const mathFormula = document.getElementById('mathFormula');
 
+            // Format Coordinates
             let zCoords = zeros.length === 0 ? 'None' : zeros.map((z, i) => 
                 `z${i+1} = ${z.re >= 0 ? ' ' : ''}${z.re.toFixed(3)} ${z.im >= 0 ? '+' : '-'} ${Math.abs(z.im).toFixed(3)}j`
             ).join('<br>');
@@ -560,6 +563,7 @@
                 `p${i+1} = ${p.re >= 0 ? ' ' : ''}${p.re.toFixed(3)} ${p.im >= 0 ? '+' : '-'} ${Math.abs(p.im).toFixed(3)}j`
             ).join('<br>');
 
+            // Calculate Coefficients
             let b = rootsToCoefficients(zeros);
             let a = rootsToCoefficients(poles);
 
@@ -569,6 +573,7 @@
             numDisp.innerHTML = `<strong>Coordinates:</strong><br>${zCoords}<br><br><strong>Expanded b[k]:</strong><br>${bStr}`;
             denDisp.innerHTML = `<strong>Coordinates:</strong><br>${pCoords}<br><br><strong>Expanded a[k]:</strong><br>${aStr}`;
 
+            // Build Tex Formula
             let numTex = formatPolyTex(b, 'b');
             let denTex = formatPolyTex(a, 'a');
 
@@ -725,7 +730,6 @@
         function drawZPlane() {
             ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-            // Axes
             ctx.strokeStyle = '#334155';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -733,7 +737,6 @@
             ctx.moveTo(CENTER, 0); ctx.lineTo(CENTER, CANVAS_SIZE);
             ctx.stroke();
 
-            // Unit Circle
             ctx.strokeStyle = '#64748b';
             ctx.lineWidth = 1.5;
             ctx.setLineDash([4, 4]);
@@ -741,30 +744,6 @@
             ctx.arc(CENTER, CENTER, RADIUS, 0, 2 * Math.PI);
             ctx.stroke();
             ctx.setLineDash([]);
-
-            // Unit Circle Labels
-            ctx.font = '11px sans-serif';
-            ctx.fillStyle = '#94a3b8';
-
-            // z = 1 (ω = 0)
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('z = 1 (ω = 0)', CENTER + RADIUS + 6, CENTER);
-
-            // z = -1 (ω = π)
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('z = -1 (ω = π)', CENTER - RADIUS - 6, CENTER);
-
-            // z = j (ω = π/2)
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText('z = j (ω = π/2)', CENTER, CENTER - RADIUS - 6);
-
-            // z = -j (ω = -π/2)
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText('z = -j (ω = -π/2)', CENTER, CENTER + RADIUS + 6);
 
             const drawMarker = (list, isPole) => {
                 list.forEach(r => {
@@ -833,134 +812,132 @@
                 phaseData.push(totalPhase);
             }
 
-            // Compute Impulse Response h[n]
             const timeData = [];
             const N = 31;
-            const b = rootsToCoefficients(zeros);
-            const a = rootsToCoefficients(poles);
-
             const x_sig = new Array(N).fill(0); x_sig[0] = 1.0;
             const y_sig = new Array(N).fill(0);
-
-            for (let n = 0; n < N; n++) {
+            
+            for(let n=0; n<N; n++) {
                 let val = 0;
-                for (let k = 0; k < b.length; k++) {
-                    if (n - k >= 0) val += b[k] * x_sig[n - k];
+                if (poles.length === 0) {
+                    val = x_sig[n];
+                    if (zeros.length > 0) {
+                        val = x_sig[n] - (zeros[0] ? zeros[0].re * (n>0?x_sig[n-1]:0) : 0);
+                    }
+                } else {
+                    let p = poles[0];
+                    let r = Math.hypot(p.re, p.im);
+                    if (poles.length === 1) {
+                        val = x_sig[n] + p.re * (n > 0 ? y_sig[n-1] : 0);
+                    } else {
+                        let p2 = poles[1];
+                        val = x_sig[n] + (p.re + p2.re) * (n > 0 ? y_sig[n-1] : 0) - (r*r) * (n > 1 ? y_sig[n-2] : 0);
+                    }
                 }
-                for (let k = 1; k < a.length; k++) {
-                    if (n - k >= 0) val -= a[k] * y_sig[n - k];
-                }
+                
+                if (val > 50) val = 50;
+                if (val < -50) val = -50;
                 y_sig[n] = val;
                 timeData.push(val);
             }
 
+            let maxVal = Math.max(...timeData.map(Math.abs));
+            timeChart.options.scales.y.min = maxVal > 2 ? -Math.min(50, maxVal * 1.2) : -2;
+            timeChart.options.scales.y.max = maxVal > 2 ? Math.min(50, maxVal * 1.2) : 2;
+
             freqChart.data.datasets[0].data = freqData;
-            freqChart.update();
+            freqChart.update('none');
 
             phaseChart.data.datasets[0].data = phaseData;
-            phaseChart.update();
+            phaseChart.update('none');
 
             timeChart.data.datasets[0].data = timeData;
-            timeChart.update();
+            timeChart.update('none');
         }
 
         function setupCanvasListeners() {
-            const chkConjugate = document.getElementById('chkConjugate');
-
-            function getClosestRoot(clickPt) {
-                let threshold = 12; // pixel radius
-                let found = null;
-
-                poles.forEach((p, index) => {
-                    let pPix = complexToPixel(p.re, p.im);
-                    let dist = Math.hypot(pPix.x - clickPt.x, pPix.y - clickPt.y);
-                    if (dist < threshold) {
-                        found = { list: poles, index: index, root: p };
-                        threshold = dist;
-                    }
+            const findClosest = (pt, list) => {
+                let match = null, minD = 15; 
+                list.forEach((r, idx) => {
+                    let pPix = complexToPixel(r.re, r.im);
+                    let d = Math.hypot(pt.x - pPix.x, pt.y - pPix.y);
+                    if (d < minD) { minD = d; match = { list: list, index: idx }; }
                 });
-
-                zeros.forEach((z, index) => {
-                    let zPix = complexToPixel(z.re, z.im);
-                    let dist = Math.hypot(zPix.x - clickPt.x, zPix.y - clickPt.y);
-                    if (dist < threshold) {
-                        found = { list: zeros, index: index, root: z };
-                        threshold = dist;
-                    }
-                });
-
-                return found;
-            }
+                return match;
+            };
 
             canvas.addEventListener('mousedown', (e) => {
                 const rect = canvas.getBoundingClientRect();
-                const clickPt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-                const cCoord = pixelToComplex(clickPt.x, clickPt.y);
+                const mousePt = { 
+                    x: (e.clientX - rect.left) * (canvas.width / rect.width), 
+                    y: (e.clientY - rect.top) * (canvas.height / rect.height) 
+                };
+                const compCoord = pixelToComplex(mousePt.x, mousePt.y);
+
+                let target = findClosest(mousePt, poles) || findClosest(mousePt, zeros);
 
                 if (currentMode === 'delete') {
-                    const target = getClosestRoot(clickPt);
                     if (target) {
-                        const root = target.list[target.index];
+                        let item = target.list[target.index];
                         target.list.splice(target.index, 1);
-                        if (chkConjugate.checked && Math.abs(root.im) > 1e-4) {
-                            const conjIdx = target.list.findIndex(r => Math.abs(r.re - root.re) < 1e-3 && Math.abs(r.im + root.im) < 1e-3);
-                            if (conjIdx !== -1) target.list.splice(conjIdx, 1);
+                        if (document.getElementById('chkConjugate').checked && Math.abs(item.im) > 0.001) {
+                            let cIdx = target.list.findIndex(r => Math.abs(r.re - item.re) < 0.01 && Math.abs(r.im + item.im) < 0.01);
+                            if (cIdx !== -1) target.list.splice(cIdx, 1);
                         }
                         drawZPlane();
                         calculateAndPlot();
                     }
-                } else if (currentMode === 'pole') {
-                    poles.push({ re: cCoord.re, im: cCoord.im });
-                    if (chkConjugate.checked && Math.abs(cCoord.im) > 1e-4) {
-                        poles.push({ re: cCoord.re, im: -cCoord.im });
+                    return;
+                }
+
+                if (target) {
+                    draggedRoot = target.list[target.index];
+                    return;
+                }
+
+                if (currentMode === 'pole') {
+                    poles.push({ re: compCoord.re, im: compCoord.im });
+                    if (document.getElementById('chkConjugate').checked && Math.abs(compCoord.im) > 0.01) {
+                        poles.push({ re: compCoord.re, im: -compCoord.im });
                     }
-                    drawZPlane();
-                    calculateAndPlot();
                 } else if (currentMode === 'zero') {
-                    zeros.push({ re: cCoord.re, im: cCoord.im });
-                    if (chkConjugate.checked && Math.abs(cCoord.im) > 1e-4) {
-                        zeros.push({ re: cCoord.re, im: -cCoord.im });
+                    zeros.push({ re: compCoord.re, im: compCoord.im });
+                    if (document.getElementById('chkConjugate').checked && Math.abs(compCoord.im) > 0.01) {
+                        zeros.push({ re: compCoord.re, im: -compCoord.im });
                     }
-                    drawZPlane();
-                    calculateAndPlot();
-                } else if (currentMode === 'default') {
-                    const target = getClosestRoot(clickPt);
-                    if (target) {
-                        draggedRoot = target;
-                    }
-                }
-            });
-
-            canvas.addEventListener('mousemove', (e) => {
-                if (!draggedRoot) return;
-
-                const rect = canvas.getBoundingClientRect();
-                const clickPt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-                const cCoord = pixelToComplex(clickPt.x, clickPt.y);
-
-                const origRoot = draggedRoot.root;
-                const list = draggedRoot.list;
-
-                let conjRoot = null;
-                if (chkConjugate.checked && Math.abs(origRoot.im) > 1e-4) {
-                    conjRoot = list.find(r => r !== origRoot && Math.abs(r.re - origRoot.re) < 1e-3 && Math.abs(r.im + origRoot.im) < 1e-3);
-                }
-
-                origRoot.re = cCoord.re;
-                origRoot.im = cCoord.im;
-
-                if (conjRoot) {
-                    conjRoot.re = cCoord.re;
-                    conjRoot.im = -cCoord.im;
                 }
 
                 drawZPlane();
                 calculateAndPlot();
             });
 
-            window.addEventListener('mouseup', () => {
-                draggedRoot = null;
+            canvas.addEventListener('mousemove', (e) => {
+                if (!draggedRoot) return;
+                const rect = canvas.getBoundingClientRect();
+                const mousePt = { 
+                    x: (e.clientX - rect.left) * (canvas.width / rect.width), 
+                    y: (e.clientY - rect.top) * (canvas.height / rect.height) 
+                };
+                const compCoord = pixelToComplex(mousePt.x, mousePt.y);
+
+                let oldIm = draggedRoot.im;
+                draggedRoot.re = compCoord.re;
+                draggedRoot.im = compCoord.im;
+
+                if (document.getElementById('chkConjugate').checked && Math.abs(oldIm) > 0.001) {
+                    let list = poles.includes(draggedRoot) ? poles : zeros;
+                    let sister = list.find(r => r !== draggedRoot && Math.abs(r.re - draggedRoot.re) < 0.1 && Math.sign(r.im) !== Math.sign(oldIm));
+                    if (sister) {
+                        sister.re = compCoord.re;
+                        sister.im = -compCoord.im;
+                    }
+                }
+
+                drawZPlane();
+                calculateAndPlot();
             });
+
+            window.addEventListener('mouseup', () => { draggedRoot = null; });
         }
     </script>
 </body>
