@@ -875,11 +875,18 @@
         function findConjugateIndex(arr, targetIdx) {
             const target = arr[targetIdx];
             if (!target || Math.abs(target.im) < 0.01) return -1;
-            return arr.findIndex((item, i) => 
-                i !== targetIdx &&
-                Math.abs(item.re - target.re) < 0.05 &&
-                Math.abs(item.im + target.im) < 0.05
-            );
+            let bestIdx = -1;
+            let minDist = Infinity;
+            arr.forEach((item, i) => {
+                if (i !== targetIdx) {
+                    let dist = Math.hypot(item.re - target.re, item.im + target.im);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestIdx = i;
+                    }
+                }
+            });
+            return minDist < 0.35 ? bestIdx : -1;
         }
 
         function setupCanvasListeners() {
@@ -892,6 +899,7 @@
             };
 
             canvas.addEventListener('pointerdown', (e) => {
+                canvas.setPointerCapture(e.pointerId);
                 const pos = getCanvasPos(e);
                 const complex = pixelToComplex(pos.x, pos.y);
                 const isConjugate = document.getElementById('chkConjugate').checked;
@@ -907,7 +915,7 @@
                         zeros.push({ re: complex.re, im: -complex.im });
                     }
                 } else if (currentMode === 'delete') {
-                    const threshold = 0.2;
+                    const threshold = 0.25;
                     let pIdx = poles.findIndex(p => Math.hypot(p.re - complex.re, p.im - complex.im) < threshold);
                     if (pIdx !== -1) {
                         let conjIdx = isConjugate ? findConjugateIndex(poles, pIdx) : -1;
@@ -928,7 +936,7 @@
                         }
                     }
                 } else if (currentMode === 'default') {
-                    const threshold = 0.2;
+                    const threshold = 0.25;
                     let pIdx = poles.findIndex(p => Math.hypot(p.re - complex.re, p.im - complex.im) < threshold);
                     if (pIdx !== -1) {
                         let conjIdx = isConjugate ? findConjugateIndex(poles, pIdx) : -1;
@@ -959,10 +967,25 @@
 
                 const list = draggedRoot.type === 'pole' ? poles : zeros;
 
+                // Update primary dragged root
                 list[draggedRoot.index] = { re: complex.re, im: complex.im };
 
-                if (isConjugate && draggedRoot.conjIndex !== undefined && draggedRoot.conjIndex !== -1) {
-                    list[draggedRoot.conjIndex] = { re: complex.re, im: -complex.im };
+                // Handle conjugate tracking dynamically
+                if (isConjugate && Math.abs(complex.im) > 0.02) {
+                    if (draggedRoot.conjIndex === undefined || draggedRoot.conjIndex === -1 || !list[draggedRoot.conjIndex]) {
+                        // Locate or spawn conjugate if missing
+                        let foundIdx = findConjugateIndex(list, draggedRoot.index);
+                        if (foundIdx !== -1) {
+                            draggedRoot.conjIndex = foundIdx;
+                        } else {
+                            list.push({ re: complex.re, im: -complex.im });
+                            draggedRoot.conjIndex = list.length - 1;
+                        }
+                    }
+
+                    if (draggedRoot.conjIndex !== -1 && list[draggedRoot.conjIndex]) {
+                        list[draggedRoot.conjIndex] = { re: complex.re, im: -complex.im };
+                    }
                 }
 
                 document.getElementById('filterSelect').value = 'custom';
@@ -971,9 +994,15 @@
                 calculateAndPlot();
             });
 
-            window.addEventListener('pointerup', () => {
+            const stopDragging = (e) => {
+                if (e && e.pointerId) {
+                    try { canvas.releasePointerCapture(e.pointerId); } catch(err) {}
+                }
                 draggedRoot = null;
-            });
+            };
+
+            canvas.addEventListener('pointerup', stopDragging);
+            canvas.addEventListener('pointercancel', stopDragging);
         }
     </script>
 </body>
