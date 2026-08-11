@@ -272,13 +272,13 @@
                 }
             };
 
-            // Magnitude Chart
+            // Magnitude Chart (dB Scale)
             freqChart = new Chart(document.getElementById('freqChart').getContext('2d'), {
                 ...chartConfigBase,
                 data: {
                     labels: freqLabels,
                     datasets: [{
-                        label: 'Magnitude Response |H(e^jω)|',
+                        label: 'Magnitude Response |H(e^jω)| (dB)',
                         data: [],
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.05)',
@@ -291,7 +291,15 @@
                     ...chartConfigBase.options,
                     scales: {
                         ...chartConfigBase.options.scales,
-                        y: { ...chartConfigBase.options.scales.y, min: 0, suggestedMax: 3 }
+                        y: { 
+                            ...chartConfigBase.options.scales.y, 
+                            min: -80,
+                            suggestedMax: 10,
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value) { return value + ' dB'; }
+                            }
+                        }
                     }
                 }
             });
@@ -449,8 +457,12 @@
                     totalPhase -= Math.atan2(wIm - p.im, wRe - p.re);
                 });
 
-                let mag = denMag === 0 ? 100 : numMag / denMag;
-                freqData.push(mag);
+                let magLinear = denMag === 0 ? 100 : numMag / denMag;
+                
+                // Convert linear magnitude to dB scale with a lower bound (-120 dB)
+                const minLinear = 1e-6; 
+                let magdB = 20 * Math.log10(Math.max(magLinear, minLinear));
+                freqData.push(magdB);
 
                 while (totalPhase > Math.PI) totalPhase -= 2 * Math.PI;
                 while (totalPhase < -Math.PI) totalPhase += 2 * Math.PI;
@@ -554,7 +566,6 @@
                         zeros.push({ re: compCoord.re, im: -compCoord.im });
                     }
                 }
-                // If in 'default' mode, clicking empty space will execute nothing here.
 
                 drawZPlane();
                 calculateAndPlot();
