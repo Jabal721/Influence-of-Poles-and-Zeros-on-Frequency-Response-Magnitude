@@ -905,15 +905,23 @@
                 const isConjugate = document.getElementById('chkConjugate').checked;
 
                 if (currentMode === 'pole') {
+                    let pIdx = poles.length;
                     poles.push({ re: complex.re, im: complex.im });
+                    let cIdx = -1;
                     if (isConjugate && Math.abs(complex.im) > 0.05) {
                         poles.push({ re: complex.re, im: -complex.im });
+                        cIdx = poles.length - 1;
                     }
+                    draggedRoot = { type: 'pole', index: pIdx, conjIndex: cIdx };
                 } else if (currentMode === 'zero') {
+                    let zIdx = zeros.length;
                     zeros.push({ re: complex.re, im: complex.im });
+                    let cIdx = -1;
                     if (isConjugate && Math.abs(complex.im) > 0.05) {
                         zeros.push({ re: complex.re, im: -complex.im });
+                        cIdx = zeros.length - 1;
                     }
+                    draggedRoot = { type: 'zero', index: zIdx, conjIndex: cIdx };
                 } else if (currentMode === 'delete') {
                     const threshold = 0.25;
                     let pIdx = poles.findIndex(p => Math.hypot(p.re - complex.re, p.im - complex.im) < threshold);
@@ -967,24 +975,27 @@
 
                 const list = draggedRoot.type === 'pole' ? poles : zeros;
 
-                // Update primary dragged root
+                // Move primary target
                 list[draggedRoot.index] = { re: complex.re, im: complex.im };
 
-                // Handle conjugate tracking dynamically
-                if (isConjugate && Math.abs(complex.im) > 0.02) {
-                    if (draggedRoot.conjIndex === undefined || draggedRoot.conjIndex === -1 || !list[draggedRoot.conjIndex]) {
-                        // Locate or spawn conjugate if missing
-                        let foundIdx = findConjugateIndex(list, draggedRoot.index);
-                        if (foundIdx !== -1) {
-                            draggedRoot.conjIndex = foundIdx;
-                        } else {
-                            list.push({ re: complex.re, im: -complex.im });
-                            draggedRoot.conjIndex = list.length - 1;
+                // Handle conjugate pairing during live drag
+                if (isConjugate) {
+                    if (Math.abs(complex.im) > 0.02) {
+                        if (draggedRoot.conjIndex === undefined || draggedRoot.conjIndex === -1 || !list[draggedRoot.conjIndex]) {
+                            let foundIdx = findConjugateIndex(list, draggedRoot.index);
+                            if (foundIdx !== -1) {
+                                draggedRoot.conjIndex = foundIdx;
+                            } else {
+                                list.push({ re: complex.re, im: -complex.im });
+                                draggedRoot.conjIndex = list.length - 1;
+                            }
                         }
-                    }
-
-                    if (draggedRoot.conjIndex !== -1 && list[draggedRoot.conjIndex]) {
-                        list[draggedRoot.conjIndex] = { re: complex.re, im: -complex.im };
+                        if (draggedRoot.conjIndex !== -1 && list[draggedRoot.conjIndex]) {
+                            list[draggedRoot.conjIndex] = { re: complex.re, im: -complex.im };
+                        }
+                    } else if (draggedRoot.conjIndex !== -1 && list[draggedRoot.conjIndex]) {
+                        // Snap conjugate to real axis if close to zero
+                        list[draggedRoot.conjIndex] = { re: complex.re, im: 0 };
                     }
                 }
 
